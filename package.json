@@ -11,7 +11,7 @@
     "android/build.gradle",
     "dist/",
     "ios/Plugin/",
-    "CapacitorPluginCallkitVoip.podspec"
+    "CallkitVoipCapacitorPlugin.podspec"
   ],
   "author": "abhiranjanchaurasia",
   "license": "MIT",
