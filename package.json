@@ -1,7 +1,7 @@
 {
-  "name": "capacitor-plugin-callkit-voip",
-  "version": "1.0.4",
-  "description": "Provide CallKit and PushKit functionality to capacitor",
+  "name": "callkit-voip-capacitor-plugin",
+  "version": "1.0.5",
+  "description": "Provide CallKit and PushKit functionality to capacitor on iOS & android",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -13,14 +13,14 @@
     "ios/Plugin/",
     "CapacitorPluginCallkitVoip.podspec"
   ],
-  "author": "kin9aziz",
+  "author": "abhiranjanchaurasia",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kin9aziz/capacitor-plugin-callkit-voip.git.git"
+    "url": "git+https://github.com/Abhiranjanchaurasia/callkit-voip-capacitor-plugin.git"
   },
   "bugs": {
-    "url": "https://github.com/kin9aziz/capacitor-plugin-callkit-voip.git/issues"
+    "url": "https://github.com/Abhiranjanchaurasia/callkit-voip-capacitor-plugin.git/issues"
   },
   "keywords": [
     "capacitor",
@@ -44,10 +44,10 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@capacitor/android": "^4.0.0",
-    "@capacitor/core": "^4.0.0",
+    "@capacitor/android": "^5.4.1",
+    "@capacitor/core": "^5.4.1",
     "@capacitor/docgen": "^0.0.18",
-    "@capacitor/ios": "^4.0.0",
+    "@capacitor/ios": "^5.4.1",
     "@ionic/eslint-config": "^0.3.0",
     "@ionic/prettier-config": "^1.0.1",
     "@ionic/swiftlint-config": "^1.1.2",
@@ -60,7 +60,7 @@
     "typescript": "~4.1.5"
   },
   "peerDependencies": {
-    "@capacitor/core": "^4.0.0"
+    "@capacitor/core": "^5.0.0"
   },
   "prettier": "@ionic/prettier-config",
   "swiftlint": "@ionic/swiftlint-config",
@@ -74,5 +74,8 @@
     "android": {
       "src": "android"
     }
+  },
+  "dependencies": {
+    "@capacitor/cli": "^5.4.1"
   }
 }

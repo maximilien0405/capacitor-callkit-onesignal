@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
+import android.media.MediaPlayer;
 
 
 public class VoipBackgroundService extends Service
@@ -25,7 +26,6 @@ public class VoipBackgroundService extends Service
         return false;
     }
 
-
     @Override
     public IBinder onBind(Intent intent)
     {
@@ -42,41 +42,47 @@ public class VoipBackgroundService extends Service
     public int onStartCommand(Intent intent, int flags, int startId)
     {
         Log.d("MySipService", "onStartCommand");
-        if(intent.hasExtra("connectionId") && intent.hasExtra("username"))
+        if(intent.hasExtra("callerId") && intent.hasExtra("organization"))
         {
-            String connectionId = intent.getStringExtra("connectionId");
-            String username = intent.getStringExtra("username");
-            ApiCalls apiCalls =  new ApiCalls();
-            apiCalls.gettwiliotoken(connectionId, new RetreivedTokenCallback() {
-                @Override
-                public void onTokenRetreived(String token) {
-                    Log.d("onTokenRetreived",token);
-                    if(!isServiceRunningInForeground(VoipBackgroundService.this,VoipForegroundService.class)) {
-                        show_call_notification("incoming",token,username,connectionId);
+            String callerId = intent.getStringExtra("callerId");
+            String group = intent.getStringExtra("group");
+            String message = intent.getStringExtra("message");
+            String organization = intent.getStringExtra("organization");
+            String roomname = intent.getStringExtra("roomname");
+            String source = intent.getStringExtra("source");
+            String title = intent.getStringExtra("title");
+            String type = intent.getStringExtra("type");
+            String duration = intent.getStringExtra("duration");
+            String media = intent.getStringExtra("media");
+            if(!isServiceRunningInForeground(VoipBackgroundService.this,CallNotificationService.class)) {
+                show_call_notification("incoming",callerId, group, message, organization, roomname, source, title, type, duration, media);
+                KeyguardManager km = (KeyguardManager) getApplicationContext().getSystemService(Context.KEYGUARD_SERVICE);
+                KeyguardManager.KeyguardLock kl = km.newKeyguardLock("name");
+                kl.disableKeyguard();
+            }
 
-                        KeyguardManager km = (KeyguardManager) getApplicationContext().getSystemService(Context.KEYGUARD_SERVICE);
-                        KeyguardManager.KeyguardLock kl = km.newKeyguardLock("name");
-                        kl.disableKeyguard();
-                    }
-
-                }
-            });
+            
+            
         }
         return START_NOT_STICKY;
     }
 
 
-
-    public void show_call_notification(String action, String token,String username,String roomName)
+    public void show_call_notification(String action,String callerId,String group, String message,String organization,String roomname, String source,String title,String type, String duration,String media)
     {
         Log.d("show_call_notification",action);
-        Intent serviceIntent = new Intent(this, VoipForegroundService.class);
+        Intent serviceIntent = new Intent(this, CallNotificationService.class);
         serviceIntent.setAction(action);
-        serviceIntent.putExtra("token",token);
-        serviceIntent.putExtra("username",username);
-        serviceIntent.putExtra("roomName",roomName);
-
-
+        serviceIntent.putExtra("callerId", callerId);
+        serviceIntent.putExtra("group", group);
+        serviceIntent.putExtra("message", message);
+        serviceIntent.putExtra("organization", organization);
+        serviceIntent.putExtra("roomname", roomname);
+        serviceIntent.putExtra("source", source);
+        serviceIntent.putExtra("title", title);
+        serviceIntent.putExtra("type", type);
+        serviceIntent.putExtra("duration", duration);
+        serviceIntent.putExtra("media", media);
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -88,16 +94,16 @@ public class VoipBackgroundService extends Service
         }
     }
 
+    public void abortCall() {
+        getApplicationContext().stopService(new Intent(this, CallNotificationService.class));
+    }
+
 
 
     @Override
     public void onCreate()
     {
         super.onCreate();
-
-
-
-
     }
 
 }

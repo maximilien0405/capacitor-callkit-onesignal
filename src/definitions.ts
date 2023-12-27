@@ -3,6 +3,10 @@ import type { PluginListenerHandle } from '@capacitor/core';
 export interface CallKitVoipPlugin {
   register(): Promise<void>;
 
+  show_call_notification(callData: CallData): Promise<void>;
+
+  abortCall(): Promise<void>;
+
   addListener(
       eventName: 'registration',
       listenerFunc: (token:CallToken)   => void
@@ -37,20 +41,15 @@ export interface CallToken {
 }
 
 export interface CallData {
-  /**
-   * Call ID
-   */
-  id:string;
-  /**
-   * Call Type
-   */
-  media?: CallType;
-  /**
-   * Call Display name
-   */
-  name?:string;
-  /**
-   * Call duration
-   */
-  duration?:string;
+  connectionId  :  string
+  username      :  string
+  callerId      :  string
+  group         :  string
+  message       :  string
+  organization  :  string
+  roomname      :  string
+  source        :  string
+  title         :  string
+  type          :  string
+  duration      :  string
 }

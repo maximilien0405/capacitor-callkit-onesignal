@@ -255,10 +255,17 @@ CallKitVoip.addListener("callEnded", (data:CallData) => {
 
 #### CallData
 
-| Prop           | Type                |
-|----------------|---------------------|
-| **`id`**       | <code>string</code> |
-| **`media`**    | <code>string</code> |
-| **`name`**     | <code>string</code> |
-| **`duration`** | <code>string</code> |
+| Prop               | Type                |
+| ------------------ | ------------------- |
+| **`connectionId`** | <code>string</code> |
+| **`username`**     | <code>string</code> |
+| **`callerId`**     | <code>string</code> |
+| **`group`**        | <code>string</code> |
+| **`message`**      | <code>string</code> |
+| **`organization`** | <code>string</code> |
+| **`roomname`**     | <code>string</code> |
+| **`source`**       | <code>string</code> |
+| **`title`**        | <code>string</code> |
+| **`type`**         | <code>string</code> |
+| **`duraion`**      | <code>string</code> |
 

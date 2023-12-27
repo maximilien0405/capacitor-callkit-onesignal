@@ -32,25 +32,33 @@ public class CallKitVoipPlugin: CAPPlugin {
     public func notifyEvent(eventName: String, uuid: UUID){
         if let config = connectionIdRegistry[uuid] {
             notifyListeners(eventName, data: [
-                "id": config.id,
-                "media": config.media,
-                "name"    : config.name,
-                "duration"    : config.duration,
+                "connectionId": config.connectionId,
+                "username"    : config.username,
+                "callerId": config.callerId, 
+                "group": config.group, 
+                "message": config.message, 
+                "organization": config.organization, 
+                "roomname": config.roomname, 
+                "source": config.source, 
+                "title": config.title, 
+                "type": config.type,
+                "duration": config.duration,
+                "media": config.media
             ])
             connectionIdRegistry[uuid] = nil
         }
     }
 
-    public func incomingCall(id: String, media: String, name: String, duration: String) {
+    public func incomingCall(from: String, connectionId: String, callerId: String, group: String, message: String, organization: String, roomname: String, source: String, title: String, type: String,  duration : String, media: String) {
         let update                      = CXCallUpdate()
-        update.remoteHandle             = CXHandle(type: .generic, value: name)
+        update.remoteHandle             = CXHandle(type: .generic, value: from)
         update.hasVideo                 = media == "video"
         update.supportsDTMF             = false
         update.supportsHolding          = true
         update.supportsGrouping         = false
         update.supportsUngrouping       = false
         let uuid = UUID()
-        connectionIdRegistry[uuid] = .init(id: id, media: media, name: name, duration: duration)
+        connectionIdRegistry[uuid] = .init(connectionId: connectionId, username: from, callerId: callerId, group: group, message: message, organization: organization, roomname: roomname, source: source, title: title, type: type, duration: duration, media: media)
         self.provider?.reportNewIncomingCall(with: uuid, update: update, completion: { (_) in })
     }
 
@@ -112,17 +120,23 @@ extension CallKitVoipPlugin: PKPushRegistryDelegate {
 
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
          print("didReceiveIncomingPushWith")
-         guard let id = payload.dictionaryPayload["id"] as? String else {
-             return
-         }
-         let media = (payload.dictionaryPayload["media"] as? String) ?? "voice"
-         let name = (payload.dictionaryPayload["name"] as? String) ?? "Unknown"
-         let duration = (payload.dictionaryPayload["duration"] as? String) ?? "0"
-         print("id: \(id)")
-         print("name: \(name)")
-         print("media: \(media)")
-         print("duration: \(duration)")
-        self.incomingCall(id: id, media: media, name: name, duration: duration)
+         guard let callerId = payload.dictionaryPayload["callerId"] as? String else {
+            return
+        }
+        
+        let username        = (payload.dictionaryPayload["Username"] as? String) ?? "Anonymus"
+        let connectionId    = (payload.dictionaryPayload["callerId"] as? String) ?? "Anonymus"
+        let group           = (payload.dictionaryPayload["group"] as? String) ?? "Anonymus"
+        let message         = (payload.dictionaryPayload["message"] as? String) ?? "Anonymus"
+        let organization    = (payload.dictionaryPayload["organization"] as? String) ?? "Anonymus"
+        let roomname        = (payload.dictionaryPayload["roomname"] as? String) ?? "Anonymus"
+        let source          = (payload.dictionaryPayload["source"] as? String) ?? "Anonymus"
+        let title           = (payload.dictionaryPayload["title"] as? String) ?? "Anonymus"
+        let type            = (payload.dictionaryPayload["type"] as? String) ?? "Anonymus"
+        let duration        = (payload.dictionaryPayload["duration"] as? String) ?? "60"
+        let media           = (payload.dictionaryPayload["media"] as? String) ?? "video"
+        
+        self.incomingCall(from: username, connectionId: connectionId, callerId: callerId, group: group, message: message, organization: organization, roomname: roomname, source: source, title: title, type: type, duration: duration, media: media)
     }
 
 }
@@ -130,9 +144,17 @@ extension CallKitVoipPlugin: PKPushRegistryDelegate {
 
 extension CallKitVoipPlugin {
     struct CallConfig {
-        let id: String
-        let media: String
-        let name: String
-        let duration: String
+        let connectionId : String
+        let username     : String
+        let callerId     : String
+        let group        : String
+        let message      : String
+        let organization : String
+        let roomname     : String
+        let source       : String
+        let title        : String
+        let type         : String
+        let duration     : String
+        let media        : String
     }
 }

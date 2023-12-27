@@ -44,14 +44,19 @@ public class MyConnectionService extends ConnectionService {
                 this.setActive();
                 CallKitVoipPlugin plugin = CallKitVoipPlugin.getInstance();
 
-
-
                 if(plugin != null)
                     plugin.notifyEvent("callAnswered",
-                            request.getExtras().getString("username"),
-                            request.getExtras().getString("connectionId")
+                        request.getExtras().getString("callerId"),
+                        request.getExtras().getString("group"),
+                        request.getExtras().getString("message"),
+                        request.getExtras().getString("organization"),
+                        request.getExtras().getString("roomname"),
+                        request.getExtras().getString("source"),
+                        request.getExtras().getString("title"),
+                        request.getExtras().getString("type"),
+                        request.getExtras().getString("duration"),
+                        request.getExtras().getString("media")
                     );
-
 
                 Intent launchIntent = getPackageManager().getLaunchIntentForPackage("app.bettercall");
                 if (launchIntent != null) {
@@ -65,6 +70,22 @@ public class MyConnectionService extends ConnectionService {
             @Override
             public void onReject() {
                 DisconnectCause cause = new DisconnectCause(DisconnectCause.REJECTED);
+                CallKitVoipPlugin plugin = CallKitVoipPlugin.getInstance();
+
+                if(plugin != null)
+                    plugin.notifyEvent("callEnded",
+                        request.getExtras().getString("callerId"),
+                        request.getExtras().getString("group"),
+                        request.getExtras().getString("message"),
+                        request.getExtras().getString("organization"),
+                        request.getExtras().getString("roomname"),
+                        request.getExtras().getString("source"),
+                        request.getExtras().getString("title"),
+                        request.getExtras().getString("type"),
+                        request.getExtras().getString("duration"),
+                        request.getExtras().getString("media")
+                    );
+
                 this.setDisconnected(cause);
                 this.destroy();
                 conn = null;
@@ -88,6 +109,21 @@ public class MyConnectionService extends ConnectionService {
             @Override
             public void onDisconnect() {
                 DisconnectCause cause = new DisconnectCause(DisconnectCause.LOCAL);
+                CallKitVoipPlugin plugin = CallKitVoipPlugin.getInstance();
+
+                if(plugin != null)
+                    plugin.notifyEvent("callEnded",
+                        request.getExtras().getString("callerId"),
+                        request.getExtras().getString("group"),
+                        request.getExtras().getString("message"),
+                        request.getExtras().getString("organization"),
+                        request.getExtras().getString("roomname"),
+                        request.getExtras().getString("source"),
+                        request.getExtras().getString("title"),
+                        request.getExtras().getString("type"),
+                        request.getExtras().getString("duration"),
+                        request.getExtras().getString("media")
+                    );
                 this.setDisconnected(cause);
                 this.destroy();
                 conn = null;

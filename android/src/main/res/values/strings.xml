@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">capacitor-plugin-callkit-voip</string>
+    <string name="title_activity_main">capacitor-plugin-callkit-voip</string>
+    <string name="package_name">com.bfine.capactior.callkitvoip</string>
+    <string name="custom_url_scheme">com.bfine.capactior.callkitvoip</string>
+    <string name="default_notification_channel_id">channel-01</string>
+    <string name="incoming_call">Incoming Call</string>
+    <string name="answer">Answer</string>
+    <string name="reject">Reject</string>
+</resources>

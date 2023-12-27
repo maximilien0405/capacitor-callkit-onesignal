@@ -18,7 +18,7 @@ public class Dialog {
             Context context) {
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(context);
 
-        alertDialogBuilder.setIcon(R.drawable.ic_videocam_green_24px);
+        alertDialogBuilder.setIcon(com.bfine.capactior.callkitvoip.R.drawable.ic_videocam_green_24px);
         alertDialogBuilder.setTitle("Connect to a room");
         alertDialogBuilder.setPositiveButton("Connect", callParticipantsClickListener);
         alertDialogBuilder.setNegativeButton("Cancel", cancelClickListener);
