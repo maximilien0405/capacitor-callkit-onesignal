@@ -1,4 +1,4 @@
-package com.bfine.capactior.callkitvoip.androidcall;
+package com.bfine.capactior.callkitvoip;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;

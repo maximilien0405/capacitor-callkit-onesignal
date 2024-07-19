@@ -1,5 +1,6 @@
-package com.bfine.capactior.callkitvoip.androidcall;
+package com.bfine.capactior.callkitvoip;
 
+import android.annotation.SuppressLint;
 import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -74,6 +75,7 @@ public void onCreate() {
     createChannel();
 }
 
+@SuppressLint("ForegroundServiceType")
 @Override
 public int onStartCommand(Intent intent, int flags, int startId) {
     Bundle data = null;
@@ -215,7 +217,13 @@ public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("onStartCommand!!", roomname);
     }
     try {
-        Intent receiveCallAction = new Intent(getApplicationContext(), CallNotificationActionReceiver.class);
+
+        Class<?> mainAppClass = Class.forName("com.lsportal.migration.MainApplication");
+        Object mainAppInstance = mainAppClass.getMethod("getInstance").invoke(null);
+        Intent receiveCallAction = (Intent) mainAppClass.getMethod("getLaunchMainActivity").invoke(mainAppInstance);;
+        
+
+        // Intent receiveCallAction = new Intent(getApplicationContext(), mainAppClass);
 
         receiveCallAction.putExtra("ConstantApp.CALL_RESPONSE_ACTION_KEY", "ConstantApp.CALL_RECEIVE_ACTION");
         receiveCallAction.putExtra("ACTION_TYPE", "RECEIVE_CALL");
@@ -269,7 +277,7 @@ public int onStartCommand(Intent intent, int flags, int startId) {
 
         callDialogAction.setAction("DIALOG_CALL");
         Log.d("onCreatePendingEvent!!", roomname);
-        PendingIntent receiveCallPendingIntent = PendingIntent.getBroadcast(getApplicationContext(), 1200, receiveCallAction, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent receiveCallPendingIntent = PendingIntent.getActivity(getApplicationContext(), 1200, receiveCallAction, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         PendingIntent cancelCallPendingIntent = PendingIntent.getBroadcast(getApplicationContext(), 1201, cancelCallAction, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         PendingIntent callDialogPendingIntent = PendingIntent.getBroadcast(getApplicationContext(), 1202, callDialogAction, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 

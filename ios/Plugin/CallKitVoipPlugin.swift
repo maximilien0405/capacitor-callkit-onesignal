@@ -87,7 +87,7 @@ extension CallKitVoipPlugin: CXProviderDelegate {
         // Answers an incoming call
         print("CXAnswerCallAction answers an incoming call")
         notifyEvent(eventName: "callAnswered", uuid: action.callUUID)
-        endCall(uuid: action.callUUID)
+        // endCall(uuid: action.callUUID)
         action.fulfill()
     }
 

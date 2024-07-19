@@ -8,23 +8,23 @@ export interface CallKitVoipPlugin {
   abortCall(): Promise<void>;
 
   addListener(
-      eventName: 'registration',
-      listenerFunc: (token:CallToken)   => void
+    eventName: 'registration',
+    listenerFunc: (token:CallToken)   => void
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
 
   addListener(
-      eventName: 'callAnswered',
-      listenerFunc: (callData: CallData)  => void
+    eventName: 'callAnswered',
+    listenerFunc: (callData: CallData)  => void
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
 
   addListener(
-      eventName: 'callStarted',
-      listenerFunc: (callData: CallData) => void
+    eventName: 'callStarted',
+    listenerFunc: (callData: CallData) => void
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
 
   addListener(
-      eventName: 'callEnded',
-      listenerFunc: (callData: CallData) => void
+    eventName: 'callEnded',
+    listenerFunc: (callData: CallData) => void
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
 }
 

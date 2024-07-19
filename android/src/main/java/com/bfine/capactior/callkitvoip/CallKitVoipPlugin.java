@@ -1,7 +1,8 @@
 package com.bfine.capactior.callkitvoip;
 
-import com.bfine.capactior.callkitvoip.androidcall.CallNotificationService;
+import com.bfine.capactior.callkitvoip.CallNotificationService;
 import com.getcapacitor.Bridge;
+import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Logger;
 import com.getcapacitor.Plugin;
@@ -10,6 +11,7 @@ import com.getcapacitor.PluginHandle;
 import com.getcapacitor.PluginMethod;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -121,5 +123,10 @@ public class CallKitVoipPlugin extends Plugin {
         context.stopService(serviceIntent);
     }
 
+    public void stopCallServices() {
+        Log.d("stopCallServices","Called");
+        Intent serviceIntent = new Intent(context, CallNotificationService.class);
+        context.stopService(serviceIntent);
+    }
 
 }

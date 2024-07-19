@@ -1,6 +1,6 @@
 {
   "name": "callkit-voip-capacitor-plugin",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Provide CallKit and PushKit functionality to capacitor on iOS & android",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
@@ -41,29 +41,31 @@
     "prettier": "prettier \"**/*.{css,html,ts,js,java}\"",
     "swiftlint": "node-swiftlint",
     "docgen": "docgen --api CallKitVoipPlugin --output-readme README.md --output-json dist/docs.json",
-    "build": "npm run clean && npm run docgen && tsc && rollup -c rollup.config.js",
+    "build": "npm run clean && npm run docgen && tsc && rollup --config --bundleConfigAsCjs",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@capacitor/android": "^5.4.1",
-    "@capacitor/core": "^5.4.1",
-    "@capacitor/docgen": "^0.0.18",
-    "@capacitor/ios": "^5.4.1",
-    "@ionic/eslint-config": "^0.3.0",
-    "@ionic/prettier-config": "^1.0.1",
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/core": "^6.1.0",
+    "@capacitor/docgen": "^0.2.2",
+    "@capacitor/ios": "^6.1.0",
+    "@ionic/eslint-config": "^0.4.0",
+    "@ionic/prettier-config": "^4.0.0",
     "@ionic/swiftlint-config": "^1.1.2",
-    "eslint": "^7.11.0",
-    "prettier": "~2.3.0",
-    "prettier-plugin-java": "~1.0.2",
-    "rimraf": "^3.0.2",
-    "rollup": "^2.32.0",
+    "@types/node": "^20.14.10",
+    "@types/vinyl": "^2.0.12",
+    "eslint": "^9.6.0",
+    "prettier": "^3.3.2",
+    "prettier-plugin-java": "^2.6.0",
+    "rimraf": "^6.0.0",
+    "rollup": "^4.18.1",
     "swiftlint": "^1.0.1",
-    "typescript": "~4.1.5"
+    "typescript": "^5.5.3"
   },
   "peerDependencies": {
-    "@capacitor/core": "^5.0.0"
+    "@capacitor/core": "^6.1.0"
   },
   "prettier": "@ionic/prettier-config",
   "swiftlint": "@ionic/swiftlint-config",
@@ -79,6 +81,7 @@
     }
   },
   "dependencies": {
-    "@capacitor/cli": "^5.4.1"
+    "@capacitor/cli": "^6.1.0",
+    "@rollup/plugin-json": "^6.1.0"
   }
 }
