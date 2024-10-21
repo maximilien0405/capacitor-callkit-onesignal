@@ -13,6 +13,7 @@ public class CallKitVoipPlugin: CAPPlugin {
     private var provider: CXProvider?
     private let voipRegistry            = PKPushRegistry(queue: nil)
     private var connectionIdRegistry : [UUID: CallConfig] = [:]
+    private var uuid : UUID?
 
     @objc func register(_ call: CAPPluginCall) {
         voipRegistry.delegate = self
@@ -67,9 +68,16 @@ public class CallKitVoipPlugin: CAPPlugin {
 
     public func endCall(uuid: UUID) {
         let controller = CXCallController()
-        let transaction = CXTransaction(action: CXEndCallAction(call: uuid));controller.request(transaction,completion: { error in })
+        let transaction = CXTransaction(action: CXEndCallAction(call: uuid));
+        controller.request(transaction,completion: { error in })
     }
-
+    
+    @objc func abortCall(_ call: CAPPluginCall) {
+        if let callUUID = uuid {
+            endCall(uuid: callUUID)
+        }
+        call.resolve()
+    }
 
 
 }
@@ -86,6 +94,7 @@ extension CallKitVoipPlugin: CXProviderDelegate {
     public func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
         // Answers an incoming call
         print("CXAnswerCallAction answers an incoming call")
+        uuid = action.callUUID
         notifyEvent(eventName: "callAnswered", uuid: action.callUUID)
         // endCall(uuid: action.callUUID)
         action.fulfill()
@@ -94,6 +103,7 @@ extension CallKitVoipPlugin: CXProviderDelegate {
     public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
         // End the call
         print("CXEndCallAction represents ending call")
+        uuid = action.callUUID
         notifyEvent(eventName: "callEnded", uuid: action.callUUID)
         action.fulfill()
     }
@@ -101,6 +111,7 @@ extension CallKitVoipPlugin: CXProviderDelegate {
     public func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
         // Report connection started
         print("CXStartCallAction represents initiating an outgoing call")
+        uuid = action.callUUID
         notifyEvent(eventName: "callStarted", uuid: action.callUUID)
         action.fulfill()
     }
