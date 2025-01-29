@@ -1,6 +1,6 @@
 import { WebPlugin, PluginListenerHandle } from '@capacitor/core';
 
-import type { CallKitVoipPlugin, CallData } from './definitions';
+import type { CallKitVoipPlugin, CallData, CustomToken } from './definitions';
 
 export class CallKitVoipWeb extends WebPlugin implements CallKitVoipPlugin {
   async register(): Promise<void> {
@@ -15,6 +15,16 @@ export class CallKitVoipWeb extends WebPlugin implements CallKitVoipPlugin {
 
   async abortCall(): Promise<void> {
     console.log('call is aborted');
+    return;
+  }
+
+  async authenticateWithCustomToken(token: CustomToken): Promise<void> {
+    console.log('firebase authenticated', token);
+    return;
+  }
+
+  async logoutFromFirebase(): Promise<void> {
+    console.log('Logged out from firebase');
     return;
   }
 

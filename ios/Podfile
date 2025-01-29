@@ -9,8 +9,19 @@ end
 
 target 'Plugin' do
   capacitor_pods
-end
-
-target 'PluginTests' do
-  capacitor_pods
+  pod 'Firebase/Auth', '~> 11.0'
+  pod 'Firebase/Core', '~> 11.0'
+  pod 'Firebase/Database', '~> 11.0'
+ 
+  # Set deployment target for all pods
+  post_install do |installer|
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['SWIFT_VERSION'] = '5.1' 
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+        config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+        config.build_settings['FRAMEWORK_SEARCH_PATHS'] ||= ['$(inherited)', '$(PROJECT_DIR)/Pods/**']
+      end
+    end
+  end
 end

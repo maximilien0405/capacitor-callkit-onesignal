@@ -7,6 +7,10 @@ export interface CallKitVoipPlugin {
 
   abortCall(): Promise<void>;
 
+  authenticateWithCustomToken(token:CustomToken):  Promise<void>;
+
+  logoutFromFirebase():  Promise<void>;
+
   addListener(
     eventName: 'registration',
     listenerFunc: (token:CallToken)   => void
@@ -38,6 +42,13 @@ export interface CallToken {
    * VOIP Token
    */
   value: string;
+}
+
+export interface CustomToken {
+  /**
+   * VOIP Token
+   */
+  token: string;
 }
 
 export interface CallData {

@@ -3,7 +3,8 @@ import Capacitor
 import UIKit
 import CallKit
 import PushKit
-
+import FirebaseAuth
+import FirebaseCore
 /**
  *  CallKit Voip Plugin provides native PushKit functionality with apple CallKit to capacitor
  */
@@ -14,6 +15,7 @@ public class CallKitVoipPlugin: CAPPlugin {
     private let voipRegistry            = PKPushRegistry(queue: nil)
     private var connectionIdRegistry : [UUID: CallConfig] = [:]
     private var uuid : UUID?
+    private var realTimeDataService = RealTimeDataService()
 
     @objc func register(_ call: CAPPluginCall) {
         voipRegistry.delegate = self
@@ -27,7 +29,75 @@ public class CallKitVoipPlugin: CAPPlugin {
         config.supportedHandleTypes = [.generic]
         provider = CXProvider(configuration: config)
         provider?.setDelegate(self, queue: DispatchQueue.main)
+        
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
+
         call.resolve()
+    }
+
+    @objc func authenticateWithCustomToken(_ call: CAPPluginCall) {
+        let auth = Auth.auth()
+        
+        // Check if a user is already authenticated
+        if let currentUser = auth.currentUser {
+            currentUser.reload { error in
+                if error == nil, let refreshedUser = auth.currentUser, !refreshedUser.isAnonymous {
+                    // User is authenticated and not anonymous
+                    let result = [
+                        "uid": refreshedUser.uid
+                    ]
+                    call.resolve(result)
+                    return
+                }
+                
+                // User session is invalid, proceed with authentication
+                self.handleCustomTokenAuthentication(call, auth: auth)
+            }
+        } else {
+            // No authenticated user, proceed with authentication
+            self.handleCustomTokenAuthentication(call, auth: auth)
+        }
+    }
+
+    private func handleCustomTokenAuthentication(_ call: CAPPluginCall, auth: Auth) {
+        guard let customToken = call.getString("token"), !customToken.isEmpty else {
+            call.reject("Custom token is required.")
+            return
+        }
+        
+        auth.signIn(withCustomToken: customToken) { authResult, error in
+            if let error = error {
+                // Authentication failed
+                call.reject("Authentication failed: \(error.localizedDescription)")
+                return
+            }
+            
+            // Authentication success
+            if let user = auth.currentUser {
+                let result = [
+                    "uid": user.uid
+                ]
+                call.resolve(result)
+            } else {
+                call.reject("User not found after authentication.")
+            }
+        }
+    }
+
+    // New logout method
+    @objc func logoutFromFirebase(_ call: CAPPluginCall) {
+        do {
+            // Attempt to sign out from Firebase
+            try Auth.auth().signOut()
+            call.resolve([
+                "success": true,
+                "message": "Successfully logged out from Firebase."
+            ])
+        } catch let error as NSError {
+            call.reject("Error logging out from Firebase.")
+        }
     }
 
     public func notifyEvent(eventName: String, uuid: UUID){
@@ -58,9 +128,17 @@ public class CallKitVoipPlugin: CAPPlugin {
         update.supportsHolding          = true
         update.supportsGrouping         = false
         update.supportsUngrouping       = false
-        let uuid = UUID()
-        connectionIdRegistry[uuid] = .init(connectionId: connectionId, username: from, callerId: callerId, group: group, message: message, organization: organization, roomname: roomname, source: source, title: title, type: type, duration: duration, media: media)
-        self.provider?.reportNewIncomingCall(with: uuid, update: update, completion: { (_) in })
+        let callUUID = UUID()
+        self.uuid = callUUID
+        connectionIdRegistry[callUUID] = .init(connectionId: connectionId, username: from, callerId: callerId, group: group, message: message, organization: organization, roomname: roomname, source: source, title: title, type: type, duration: duration, media: media)
+        self.provider?.reportNewIncomingCall(with: callUUID, update: update, completion: { (_) in 
+            // Start Firebase listener for this incoming call
+            let user = Auth.auth().currentUser 
+            self.realTimeDataService.handleRealtimeListener(orgId: organization, userId: user!.uid, roomName: roomname) {
+                print("Data changed, aborting call.")
+                self.abortCall(with: callUUID)
+            }
+        })
     }
 
 
@@ -77,6 +155,10 @@ public class CallKitVoipPlugin: CAPPlugin {
             endCall(uuid: callUUID)
         }
         call.resolve()
+    }
+
+    private func abortCall(with uuid: UUID) {
+        endCall(uuid: uuid)
     }
 
 
