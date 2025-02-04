@@ -16,6 +16,7 @@ public class CallKitVoipPlugin: CAPPlugin {
     private var connectionIdRegistry : [UUID: CallConfig] = [:]
     private var uuid : UUID?
     private var realTimeDataService = RealTimeDataService()
+    private var answeredFromOtherDevices: String?
 
     @objc func register(_ call: CAPPluginCall) {
         voipRegistry.delegate = self
@@ -158,6 +159,7 @@ public class CallKitVoipPlugin: CAPPlugin {
     }
 
     private func abortCall(with uuid: UUID) {
+        answeredFromOtherDevices = "answeredFromOtherDevice"
         endCall(uuid: uuid)
     }
 
@@ -186,7 +188,11 @@ extension CallKitVoipPlugin: CXProviderDelegate {
         // End the call
         print("CXEndCallAction represents ending call")
         uuid = action.callUUID
-        notifyEvent(eventName: "callEnded", uuid: action.callUUID)
+        if answeredFromOtherDevices != "answeredFromOtherDevice" {
+            notifyEvent(eventName: "callEnded", uuid: action.callUUID)
+        } else {
+            answeredFromOtherDevices = nil
+        }
         action.fulfill()
     }
 
