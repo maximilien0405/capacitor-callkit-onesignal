@@ -132,7 +132,10 @@ public class CallKitVoipPlugin: CAPPlugin {
         let callUUID = UUID()
         self.uuid = callUUID
         connectionIdRegistry[callUUID] = .init(connectionId: connectionId, username: from, callerId: callerId, group: group, message: message, organization: organization, roomname: roomname, source: source, title: title, type: type, duration: duration, media: media)
-        self.provider?.reportNewIncomingCall(with: callUUID, update: update, completion: { (_) in 
+        //clear
+        self.answeredFromOtherDevices = ""
+
+        self.provider?.reportNewIncomingCall(with: callUUID, update: update, completion: { (_) in
             // Start Firebase listener for this incoming call
             let user = Auth.auth().currentUser 
             self.realTimeDataService.handleRealtimeListener(orgId: organization, userId: user!.uid, roomName: roomname) {
@@ -159,7 +162,7 @@ public class CallKitVoipPlugin: CAPPlugin {
     }
 
     private func abortCall(with uuid: UUID) {
-        answeredFromOtherDevices = "answeredFromOtherDevice"
+        self.answeredFromOtherDevices = "answeredFromOtherDevice"
         endCall(uuid: uuid)
     }
 
@@ -188,10 +191,12 @@ extension CallKitVoipPlugin: CXProviderDelegate {
         // End the call
         print("CXEndCallAction represents ending call")
         uuid = action.callUUID
-        if answeredFromOtherDevices != "answeredFromOtherDevice" {
-            notifyEvent(eventName: "callEnded", uuid: action.callUUID)
+        if answeredFromOtherDevices == "answeredFromOtherDevice" {
+            // Reset the flag so that future calls can be notified properly
+            self.answeredFromOtherDevices = ""
         } else {
-            answeredFromOtherDevices = nil
+            // Notify event only if the call was NOT answered from another device
+            notifyEvent(eventName: "callEnded", uuid: action.callUUID)
         }
         action.fulfill()
     }
