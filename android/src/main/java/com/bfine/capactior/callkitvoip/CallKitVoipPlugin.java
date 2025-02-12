@@ -117,6 +117,14 @@ public class CallKitVoipPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getApnsEnvironment(com.getcapacitor.JSObject call) {
+        JSObject ret = new JSObject();
+        boolean isDebuggable = (getContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        ret.put("environment", isDebuggable ? "debug" : "production");
+        call.resolve(ret);
+    }
+
+    @PluginMethod
     public void abortCall(PluginCall call) {
         Log.d("abortCall","Called");
         Intent serviceIntent = new Intent(context, CallNotificationService.class);

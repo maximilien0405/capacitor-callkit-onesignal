@@ -8,4 +8,5 @@ CAP_PLUGIN(CallKitVoipPlugin, "CallKitVoip",
     CAP_PLUGIN_METHOD(abortCall, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(authenticateWithCustomToken, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(logoutFromFirebase, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(getApnsEnvironment, CAPPluginReturnPromise);
 )

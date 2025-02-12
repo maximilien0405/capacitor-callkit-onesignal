@@ -101,6 +101,18 @@ public class CallKitVoipPlugin: CAPPlugin {
         }
     }
 
+    @objc func getApnsEnvironment(_ call: CAPPluginCall) {
+        #if DEBUG
+            let environment = "debug"
+        #else
+            let environment = "production"
+        #endif
+        
+        print("🚀 APNs Environment Detected:", environment)
+        call.resolve(["environment": environment])
+    }
+
+
     public func notifyEvent(eventName: String, uuid: UUID){
         if let config = connectionIdRegistry[uuid] {
             notifyListeners(eventName, data: [

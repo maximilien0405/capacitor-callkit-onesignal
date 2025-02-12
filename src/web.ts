@@ -28,6 +28,11 @@ export class CallKitVoipWeb extends WebPlugin implements CallKitVoipPlugin {
     return;
   }
 
+  async getApnsEnvironment() : Promise<void> {
+    console.log('getApnsEnvironment called');
+    return;
+  }
+
 
   addListener(eventName: string, _callback: (data: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle {
     const handle: PluginListenerHandle = {

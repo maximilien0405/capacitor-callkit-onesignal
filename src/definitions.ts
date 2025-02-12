@@ -11,6 +11,8 @@ export interface CallKitVoipPlugin {
 
   logoutFromFirebase():  Promise<void>;
 
+  getApnsEnvironment(): Promise<void>;
+
   addListener(
     eventName: 'registration',
     listenerFunc: (token:CallToken)   => void
