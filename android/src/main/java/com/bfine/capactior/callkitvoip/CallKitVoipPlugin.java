@@ -11,6 +11,7 @@ import com.getcapacitor.PluginHandle;
 import com.getcapacitor.PluginMethod;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.os.Build;
@@ -117,7 +118,7 @@ public class CallKitVoipPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void getApnsEnvironment(com.getcapacitor.JSObject call) {
+    public void getApnsEnvironment(PluginCall call) {
         JSObject ret = new JSObject();
         boolean isDebuggable = (getContext().getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         ret.put("environment", isDebuggable ? "debug" : "production");
