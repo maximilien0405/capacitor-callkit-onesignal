@@ -13,6 +13,8 @@ export interface CallKitVoipPlugin {
 
   getApnsEnvironment(): Promise<void>;
 
+  isScreenLocked(): Promise<void>;
+
   addListener(
     eventName: 'registration',
     listenerFunc: (token:CallToken)   => void

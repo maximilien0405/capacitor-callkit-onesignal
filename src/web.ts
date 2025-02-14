@@ -33,6 +33,11 @@ export class CallKitVoipWeb extends WebPlugin implements CallKitVoipPlugin {
     return;
   }
 
+  async isScreenLocked(): Promise<void> {
+    console.log('isScreenLocked called');
+    return;
+  }
+
 
   addListener(eventName: string, _callback: (data: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle {
     const handle: PluginListenerHandle = {

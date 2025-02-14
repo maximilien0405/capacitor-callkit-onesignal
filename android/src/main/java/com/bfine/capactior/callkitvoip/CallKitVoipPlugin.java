@@ -9,6 +9,8 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginHandle;
 import com.getcapacitor.PluginMethod;
+
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -136,6 +138,15 @@ public class CallKitVoipPlugin extends Plugin {
         Log.d("stopCallServices","Called");
         Intent serviceIntent = new Intent(context, CallNotificationService.class);
         context.stopService(serviceIntent);
+    }
+
+    @PluginMethod
+    public void isScreenLocked(PluginCall call) {
+        KeyguardManager keyguardManager = (KeyguardManager) getActivity().getSystemService(Context.KEYGUARD_SERVICE);
+        boolean isLocked = keyguardManager.isKeyguardLocked();
+        JSObject ret = new JSObject();
+        ret.put("isLocked", isLocked);
+        call.resolve(ret);
     }
 
 }
