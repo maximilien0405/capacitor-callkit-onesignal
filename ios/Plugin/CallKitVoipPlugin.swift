@@ -133,7 +133,7 @@ public class CallKitVoipPlugin: CAPPlugin {
         }
     }
 
-    public func incomingCall(from: String, connectionId: String, callerId: String, group: String, message: String, organization: String, roomname: String, source: String, title: String, type: String,  duration : String, media: String) {
+    public func incomingCall(from: String, connectionId: String, callerId: String, group: String, message: String, organization: String, roomname: String, source: String, title: String, type: String,  duration : String, media: String, completion: @escaping () -> Void) {
         let update                      = CXCallUpdate()
         update.remoteHandle             = CXHandle(type: .generic, value: from)
         update.hasVideo                 = media == "video"
@@ -147,12 +147,23 @@ public class CallKitVoipPlugin: CAPPlugin {
         //clear
         self.answeredFromOtherDevices = ""
 
-        self.provider?.reportNewIncomingCall(with: callUUID, update: update, completion: { (_) in
-            // Start Firebase listener for this incoming call
-            let user = Auth.auth().currentUser 
-            self.realTimeDataService.handleRealtimeListener(orgId: organization, userId: user!.uid, roomName: roomname) {
-                print("Data changed, aborting call.")
-                self.abortCall(with: callUUID)
+        self.provider?.reportNewIncomingCall(with: callUUID, update: update, completion: { error in
+            if let error = error {
+                print("Error reporting call: \(error.localizedDescription)")
+            }
+        
+            // IMPORTANT: Call completion() immediately after reporting the call
+            completion()
+
+            // AFTER completion, start Firebase listener
+            DispatchQueue.main.async {
+                guard let user = Auth.auth().currentUser else { return }
+                self.realTimeDataService.handleRealtimeListener(orgId: organization, 
+                                                            userId: user.uid, 
+                                                            roomName: roomname) {
+                    print("Data changed, aborting call.")
+                    self.abortCall(with: callUUID)
+                }
             }
         })
     }
@@ -170,6 +181,7 @@ public class CallKitVoipPlugin: CAPPlugin {
         if let callUUID = uuid {
             endCall(uuid: callUUID)
         }
+        self.realTimeDataService.hideVideoCallConfirmation()
         call.resolve()
     }
 
@@ -203,6 +215,7 @@ extension CallKitVoipPlugin: CXProviderDelegate {
         // End the call
         print("CXEndCallAction represents ending call")
         uuid = action.callUUID
+        self.realTimeDataService.hideVideoCallConfirmation()
         if answeredFromOtherDevices == "answeredFromOtherDevice" {
             // Reset the flag so that future calls can be notified properly
             self.answeredFromOtherDevices = ""
@@ -237,6 +250,7 @@ extension CallKitVoipPlugin: PKPushRegistryDelegate {
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
          print("didReceiveIncomingPushWith")
          guard let callerId = payload.dictionaryPayload["callerId"] as? String else {
+            completion()
             return
         }
         
@@ -252,7 +266,7 @@ extension CallKitVoipPlugin: PKPushRegistryDelegate {
         let duration        = (payload.dictionaryPayload["duration"] as? String) ?? "60"
         let media           = (payload.dictionaryPayload["media"] as? String) ?? "video"
         
-        self.incomingCall(from: username, connectionId: connectionId, callerId: callerId, group: group, message: message, organization: organization, roomname: roomname, source: source, title: title, type: type, duration: duration, media: media)
+        self.incomingCall(from: username, connectionId: connectionId, callerId: callerId, group: group, message: message, organization: organization, roomname: roomname, source: source, title: title, type: type, duration: duration, media: media, completion: completion)
     }
 
 }

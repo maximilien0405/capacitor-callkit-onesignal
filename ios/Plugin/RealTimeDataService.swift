@@ -63,7 +63,7 @@ class RealTimeDataService {
     }
     
     // Hide Video Call Confirmation
-    private func hideVideoCallConfirmation() {
+    public func hideVideoCallConfirmation() {
         print("Hiding video call confirmation.")
 
         // Cancel notifications with specific identifiers
