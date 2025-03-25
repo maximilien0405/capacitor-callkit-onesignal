@@ -5,67 +5,69 @@ import CallKit
 import PushKit
 import FirebaseAuth
 import FirebaseCore
+
 /**
- *  CallKit Voip Plugin provides native PushKit functionality with apple CallKit to capacitor
+ * CallKit Voip Plugin provides native PushKit functionality with apple CallKit to capacitor
  */
 @objc(CallKitVoipPlugin)
 public class CallKitVoipPlugin: CAPPlugin {
 
     private var provider: CXProvider?
-    private let voipRegistry            = PKPushRegistry(queue: nil)
-    private var connectionIdRegistry : [UUID: CallConfig] = [:]
-    private var uuid : UUID?
-    private var realTimeDataService = RealTimeDataService()
+    private let voipRegistry = PKPushRegistry(queue: nil)
+    private var connectionIdRegistry: [UUID: CallConfig] = [:]
+    private var uuid: UUID?
+    private var voipToken: String?
+    private let realTimeDataService = RealTimeDataService()
     private var answeredFromOtherDevices: String?
+    private let registryAccessQueue = DispatchQueue(label: "registryAccessQueue") // Serial queue for thread safety
+    private let firebaseAuthQueue = DispatchQueue(label: "firebaseAuthQueue")
 
-    @objc func register(_ call: CAPPluginCall) {
-        // Ensure VoIP registry is initialized once
-        if voipRegistry.delegate == nil {
-            voipRegistry.delegate = self
-            voipRegistry.desiredPushTypes = [.voIP]
-        }
-
-        let config = CXProviderConfiguration(localizedName: "Secure Call")
-        config.maximumCallGroups = 1
-        config.maximumCallsPerCallGroup = 1
-        config.supportsVideo = true
-        config.supportedHandleTypes = [.generic]
-
-        // Ensure provider is initialized correctly
-        provider = CXProvider(configuration: config)
-        provider?.setDelegate(self, queue: .main)
-
-        // Initialize Firebase only if it's not already configured
-        if FirebaseApp.app() == nil {
-            DispatchQueue.global(qos: .background).async {
+    override public func load() {
+        // Initialize Firebase only once at plugin load, on a background thread.
+        firebaseAuthQueue.async {
+            if FirebaseApp.app() == nil {
                 FirebaseApp.configure()
             }
         }
 
+        voipRegistry.delegate = self
+        voipRegistry.desiredPushTypes = [.voIP]
+
+        let config = CXProviderConfiguration(localizedName: "Secure Call")
+        config.supportsVideo = true
+        config.supportedHandleTypes = [.generic]
+        config.maximumCallGroups = 1
+        config.maximumCallsPerCallGroup = 1
+        provider = CXProvider(configuration: config)
+        provider?.setDelegate(self, queue: .main)
+    }
+
+    @objc func register(_ call: CAPPluginCall) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            self.notifyListeners("registration", data: ["value": self.voipToken ?? ""])
+        }
         call.resolve()
     }
 
     @objc func authenticateWithCustomToken(_ call: CAPPluginCall) {
         let auth = Auth.auth()
-        
-        // Check if a user is already authenticated
-        if let currentUser = auth.currentUser {
-            currentUser.reload { error in
-                if error == nil, let refreshedUser = auth.currentUser, !refreshedUser.isAnonymous {
-                    // User is authenticated and not anonymous
-                    let result = [
-                        "uid": refreshedUser.uid
-                    ]
-                    call.resolve(result)
+
+        if let currentUser = auth.currentUser, !currentUser.isAnonymous {
+            currentUser.reload { [weak self] error in
+                guard let self = self else { return }
+                if let error = error {
+                    NSLog("Error reloading user: \(error.localizedDescription)") // Log the error
+                    self.handleCustomTokenAuthentication(call, auth: auth)
                     return
                 }
-                
-                // User session is invalid, proceed with authentication
-                self.handleCustomTokenAuthentication(call, auth: auth)
+                if let refreshedUser = auth.currentUser, !refreshedUser.isAnonymous{
+                    call.resolve(["uid": refreshedUser.uid])
+                } else {
+                    self.handleCustomTokenAuthentication(call, auth: auth)
+                }
             }
         } else {
-            // No authenticated user, proceed with authentication
-            self.handleCustomTokenAuthentication(call, auth: auth)
+            handleCustomTokenAuthentication(call, auth: auth)
         }
     }
 
@@ -74,37 +76,36 @@ public class CallKitVoipPlugin: CAPPlugin {
             call.reject("Custom token is required.")
             return
         }
-        
-        auth.signIn(withCustomToken: customToken) { authResult, error in
-            if let error = error {
-                // Authentication failed
-                call.reject("Authentication failed: \(error.localizedDescription)")
-                return
-            }
-            
-            // Authentication success
-            if let user = auth.currentUser {
-                let result = [
-                    "uid": user.uid
-                ]
-                call.resolve(result)
-            } else {
-                call.reject("User not found after authentication.")
+
+        firebaseAuthQueue.async {
+            auth.signIn(withCustomToken: customToken) { authResult, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        call.reject("Authentication failed: \(error.localizedDescription)")
+                        return
+                    }
+                    if let user = auth.currentUser {
+                        call.resolve(["uid": user.uid])
+                    } else {
+                        call.reject("User not found after authentication.")
+                    }
+                }
             }
         }
     }
 
-    // New logout method
     @objc func logoutFromFirebase(_ call: CAPPluginCall) {
-        do {
-            // Attempt to sign out from Firebase
-            try Auth.auth().signOut()
-            call.resolve([
-                "success": true,
-                "message": "Successfully logged out from Firebase."
-            ])
-        } catch let error as NSError {
-            call.reject("Error logging out from Firebase.")
+        firebaseAuthQueue.async {
+            do {
+                try Auth.auth().signOut()
+                DispatchQueue.main.async {
+                    call.resolve(["success": true, "message": "Successfully logged out from Firebase."])
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    call.reject("Error logging out from Firebase.")
+                }
+            }
         }
     }
 
@@ -114,215 +115,190 @@ public class CallKitVoipPlugin: CAPPlugin {
         #else
             let environment = "production"
         #endif
-        
         print("🚀 APNs Environment Detected:", environment)
         call.resolve(["environment": environment])
     }
 
-
-    public func notifyEvent(eventName: String, uuid: UUID){
-        if let config = connectionIdRegistry[uuid] {
-            notifyListeners(eventName, data: [
-                "connectionId": config.connectionId,
-                "username"    : config.username,
-                "callerId": config.callerId, 
-                "group": config.group, 
-                "message": config.message, 
-                "organization": config.organization, 
-                "roomname": config.roomname, 
-                "source": config.source, 
-                "title": config.title, 
-                "type": config.type,
-                "duration": config.duration,
-                "media": config.media
-            ])
-            connectionIdRegistry[uuid] = nil
+    public func notifyEvent(eventName: String, uuid: UUID) {
+        registryAccessQueue.async { [weak self] in
+            guard let self = self else { return }
+            let config: CallConfig? = self.connectionIdRegistry[uuid] //capture the dictionary
+            DispatchQueue.main.async {
+                guard let config = config else { return }
+                self.notifyListeners(eventName, data: [
+                    "connectionId": config.connectionId, "username": config.username, "callerId": config.callerId,
+                    "group": config.group, "message": config.message, "organization": config.organization,
+                    "roomname": config.roomname, "source": config.source, "title": config.title, "type": config.type,
+                    "duration": config.duration, "media": config.media
+                ])
+            }
+            self.registryAccessQueue.async(flags: .barrier) { [weak self] in //nested call
+                guard let self = self else{return}
+                self.connectionIdRegistry[uuid] = nil
+            }
         }
     }
-    
+
     public func endCall(uuid: UUID) {
         let controller = CXCallController()
-        let transaction = CXTransaction(action: CXEndCallAction(call: uuid));
-        controller.request(transaction,completion: { error in })
-    }
-    
-    @objc func abortCall(_ call: CAPPluginCall) {
-        if let callUUID = uuid {
-            endCall(uuid: callUUID)
+        let transaction = CXTransaction(action: CXEndCallAction(call: uuid))
+        controller.request(transaction) { error in
+            if let error = error {
+                NSLog("Error ending call: \(error.localizedDescription)") // Log errors.
+            }
         }
-        self.realTimeDataService.hideVideoCallConfirmation()
-        call.resolve()
+    }
+
+    @objc func abortCall(_ call: CAPPluginCall) {
+        guard let callUUID = uuid else {
+            print("No active call to abort")
+            call.resolve()
+            return
+        }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.endCall(uuid: callUUID)
+            self.realTimeDataService.hideVideoCallConfirmation()
+            call.resolve()
+        }
     }
 
     private func abortCall(with uuid: UUID) {
-        self.answeredFromOtherDevices = "answeredFromOtherDevice"
+        answeredFromOtherDevices = "answeredFromOtherDevice"
         endCall(uuid: uuid)
     }
-
-
 }
 
-
 // MARK: CallKit events handler
-
 extension CallKitVoipPlugin: CXProviderDelegate {
 
     public func providerDidReset(_ provider: CXProvider) {
-
+        NSLog("Provider did reset")
     }
 
     public func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
-        // Answers an incoming call
-        print("CXAnswerCallAction answers an incoming call")
         uuid = action.callUUID
         notifyEvent(eventName: "callAnswered", uuid: action.callUUID)
-        // endCall(uuid: action.callUUID)
         action.fulfill()
     }
 
     public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
-        // End the call
-        print("CXEndCallAction represents ending call")
         uuid = action.callUUID
-        self.realTimeDataService.hideVideoCallConfirmation()
-        if answeredFromOtherDevices == "answeredFromOtherDevice" {
-            // Reset the flag so that future calls can be notified properly
-            self.answeredFromOtherDevices = ""
-        } else {
-            // Notify event only if the call was NOT answered from another device
+        realTimeDataService.hideVideoCallConfirmation()
+        if answeredFromOtherDevices != "answeredFromOtherDevice" {
             notifyEvent(eventName: "callEnded", uuid: action.callUUID)
         }
+        answeredFromOtherDevices = nil // Reset flag
         action.fulfill()
     }
 
     public func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
-        // Report connection started
-        print("CXStartCallAction represents initiating an outgoing call")
         uuid = action.callUUID
         notifyEvent(eventName: "callStarted", uuid: action.callUUID)
         action.fulfill()
     }
-
-
 }
 
 // MARK: PushKit events handler
 extension CallKitVoipPlugin: PKPushRegistryDelegate {
 
     public func pushRegistry(_ registry: PKPushRegistry, didUpdate pushCredentials: PKPushCredentials, for type: PKPushType) {
-        let parts = pushCredentials.token.map { String(format: "%02.2hhx", $0) }
-        let token = parts.joined()
+        let token = pushCredentials.token.map { String(format: "%02.2hhx", $0) }.joined()
         print("Token: \(token)")
+        voipToken = token
         notifyListeners("registration", data: ["value": token])
     }
-    
+
     public func pushRegistry(
         _ registry: PKPushRegistry,
         didReceiveIncomingPushWith payload: PKPushPayload,
         for type: PKPushType,
         completion: @escaping () -> Void
     ) {
-        print("didReceiveIncomingPushWith")
-
-        // Ensure callerId exists
-        guard let callerId = payload.dictionaryPayload["callerId"] as? String else {
-            print("callerId missing, aborting push processing.")
+        guard type == .voIP, let callerId = payload.dictionaryPayload["callerId"] as? String else {
             completion()
             return
         }
 
-        // Helper function to extract values with a default fallback
-        func getValue(for key: String, default: String = "Anonymous") -> String {
-            return payload.dictionaryPayload[key] as? String ?? `default`
+        let username = payload.dictionaryPayload["Username"] as? String ?? "Anonymous"
+        let callUUID = UUID()
+        uuid = callUUID
+
+        let config = CallConfig(
+                connectionId: callerId, username: username, callerId: callerId,
+                group: payload.dictionaryPayload["group"] as? String ?? "Anonymous",
+                message: payload.dictionaryPayload["message"] as? String ?? "Anonymous",
+                organization: payload.dictionaryPayload["organization"] as? String ?? "Anonymous",
+                roomname: payload.dictionaryPayload["roomname"] as? String ?? "Anonymous",
+                source: payload.dictionaryPayload["source"] as? String ?? "Anonymous",
+                title: payload.dictionaryPayload["title"] as? String ?? "Anonymous",
+                type: payload.dictionaryPayload["type"] as? String ?? "Anonymous",
+                duration: payload.dictionaryPayload["duration"] as? String ?? "60",
+                media: payload.dictionaryPayload["media"] as? String ?? "video"
+            )
+
+        registryAccessQueue.async(flags: .barrier) { [weak self] in
+            guard let self = self else { return }
+            self.connectionIdRegistry[callUUID] = config
         }
 
-        let username     = getValue(for: "Username")
-        let connectionId = callerId
-        let group        = getValue(for: "group")
-        let message      = getValue(for: "message")
-        let organization = getValue(for: "organization")
-        let roomname     = getValue(for: "roomname")
-        let source       = getValue(for: "source")
-        let title        = getValue(for: "title")
-        let type         = getValue(for: "type")
-        let duration     = getValue(for: "duration", default: "60")
-        let media        = getValue(for: "media", default: "video")
+        answeredFromOtherDevices = nil
 
-        let callUUID = UUID()
-        self.uuid = callUUID
+        guard let provider = provider else {
+            print("CXProvider is nil, skipping call report.")
+            completion()
+            return
+        }
 
         let update = CXCallUpdate()
         update.remoteHandle = CXHandle(type: .generic, value: username)
-        update.hasVideo = (media == "video")
+        update.hasVideo = (payload.dictionaryPayload["media"] as? String ?? "video") == "video"
         update.supportsDTMF = false
         update.supportsHolding = true
         update.supportsGrouping = false
         update.supportsUngrouping = false
 
-        // Store call details
-        connectionIdRegistry[callUUID] = .init(
-            connectionId: connectionId,
-            username: username,
-            callerId: callerId,
-            group: group,
-            message: message,
-            organization: organization,
-            roomname: roomname,
-            source: source,
-            title: title,
-            type: type,
-            duration: duration,
-            media: media
-        )
-
-        // Clear previous call states
-        self.answeredFromOtherDevices = ""
-
-        self.provider?.reportNewIncomingCall(with: callUUID, update: update) { error in
+        provider.reportNewIncomingCall(with: callUUID, update: update) { error in
             if let error = error {
-                print("Error reporting call: \(error.localizedDescription)")
+                NSLog("Error reporting call: \(error.localizedDescription)")
             }
             completion()
         }
 
         // Handle Firebase listener separately
-        DispatchQueue.global(qos: .background).async {
-            if FirebaseApp.app() == nil {
-                FirebaseApp.configure()
-            }
+        firebaseAuthQueue.async {
             guard let user = Auth.auth().currentUser else {
                 print("Firebase user not found")
                 return
             }
             DispatchQueue.main.async {
                 self.realTimeDataService.handleRealtimeListener(
-                    orgId: organization,
+                    orgId: payload.dictionaryPayload["organization"] as? String ?? "Anonymous",
                     userId: user.uid,
-                    roomName: roomname
-                ) {
-                    print("Data changed, aborting call.")
+                    roomName: payload.dictionaryPayload["roomname"] as? String ?? "Anonymous"
+                ) { [weak self] in
+                    guard let self = self else { return } // Safely access self
+                    NSLog("Data changed, aborting call.")
                     self.abortCall(with: callUUID)
                 }
             }
         }
     }
-
 }
-
 
 extension CallKitVoipPlugin {
     struct CallConfig {
-        let connectionId : String
-        let username     : String
-        let callerId     : String
-        let group        : String
-        let message      : String
-        let organization : String
-        let roomname     : String
-        let source       : String
-        let title        : String
-        let type         : String
-        let duration     : String
-        let media        : String
+        let connectionId: String
+        let username: String
+        let callerId: String
+        let group: String
+        let message: String
+        let organization: String
+        let roomname: String
+        let source: String
+        let title: String
+        let type: String
+        let duration: String
+        let media: String
     }
 }
