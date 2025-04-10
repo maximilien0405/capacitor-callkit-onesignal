@@ -24,11 +24,11 @@ public class CallKitVoipPlugin: CAPPlugin {
 
     override public func load() {
         // Initialize Firebase only once at plugin load, on a background thread.
-        firebaseAuthQueue.async {
-            if FirebaseApp.app() == nil {
-                FirebaseApp.configure()
-            }
-        }
+        // firebaseAuthQueue.async {
+        //     if FirebaseApp.app() == nil {
+        //         FirebaseApp.configure()
+        //     }
+        // }
 
         voipRegistry.delegate = self
         voipRegistry.desiredPushTypes = [.voIP]
