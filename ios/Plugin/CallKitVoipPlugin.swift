@@ -17,19 +17,14 @@ public class CallKitVoipPlugin: CAPPlugin {
     private var connectionIdRegistry: [UUID: CallConfig] = [:]
     private var uuid: UUID?
     private var voipToken: String?
+    var hasRegisteredListener = false
+    var lastNotifiedToken: String? = nil
     private let realTimeDataService = RealTimeDataService()
     private var answeredFromOtherDevices: String?
     private let registryAccessQueue = DispatchQueue(label: "registryAccessQueue") // Serial queue for thread safety
     private let firebaseAuthQueue = DispatchQueue(label: "firebaseAuthQueue")
 
     override public func load() {
-        // Initialize Firebase only once at plugin load, on a background thread.
-        // firebaseAuthQueue.async {
-        //     if FirebaseApp.app() == nil {
-        //         FirebaseApp.configure()
-        //     }
-        // }
-
         voipRegistry.delegate = self
         voipRegistry.desiredPushTypes = [.voIP]
 
@@ -43,10 +38,33 @@ public class CallKitVoipPlugin: CAPPlugin {
     }
 
     @objc func register(_ call: CAPPluginCall) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            self.notifyListeners("registration", data: ["value": self.voipToken ?? ""])
-        }
+        hasRegisteredListener = true
         call.resolve()
+        
+        hasRegisteredListener = true
+
+        if let token = voipToken, token != lastNotifiedToken {
+            lastNotifiedToken = token
+            DispatchQueue.main.async {
+                let script = """
+                    // This will be injected into the WebView
+                    window.dispatchEvent(new CustomEvent('voipReceived', {
+                        detail: {
+                            voipToken: "\(token)"
+                        }
+                    }));
+                    """
+                
+                if let webView = self.bridge?.webView {
+                    webView.evaluateJavaScript(script) { (result, error) in
+                        if let error = error {
+                            print("Error injecting script: \(error)")
+                        }
+                    }
+                }
+            }
+            
+        }
     }
 
     @objc func authenticateWithCustomToken(_ call: CAPPluginCall) {
@@ -206,7 +224,12 @@ extension CallKitVoipPlugin: PKPushRegistryDelegate {
         let token = pushCredentials.token.map { String(format: "%02.2hhx", $0) }.joined()
         print("Token: \(token)")
         voipToken = token
-        notifyListeners("registration", data: ["value": token])
+//        notifyListeners("registration", data: ["value": token])"
+        // Only notify if the token is new and JS listener is ready
+        if hasRegisteredListener && token != lastNotifiedToken {
+            lastNotifiedToken = token
+            notifyListeners("registration", data: ["value": token])
+        }
     }
 
     public func pushRegistry(
