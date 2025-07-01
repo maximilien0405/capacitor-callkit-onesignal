@@ -34,7 +34,7 @@ class RealTimeDataService {
                 guard snapshot.exists(), let details = snapshot.value as? [String: Any] else {
                     self.removeListener()
                     DispatchQueue.main.async {
-                        self.hideVideoCallConfirmation()
+                        self.hideVideoCallConfirmation(calledFrom: "handleRealtimeListener")
                         abortCall()
                     }
                     return
@@ -44,7 +44,7 @@ class RealTimeDataService {
                     print("Error: Failed to parse RoomDetails.")
                     self.removeListener()
                     DispatchQueue.main.async {
-                        self.hideVideoCallConfirmation()
+                        self.hideVideoCallConfirmation(calledFrom: "handleRealtimeListener")
                         abortCall()
                     }
                     return
@@ -70,40 +70,40 @@ class RealTimeDataService {
     private func handleGroupVideoCall(details: RoomDetails, userId: String, callback: @escaping () -> Void) {
         guard let members = details.members, !members.isEmpty else { return }
 
-        for user in members where user.userId == userId {
-            if let status = user.status, ["cancel", "declined", "removed", "unanswered", "accepted"].contains(status) {
-                callback()
-                hideVideoCallConfirmation()
-                return
-            }
+        if shouldAbortCall(for: members, userId: userId) {
+           DispatchQueue.main.async {
+               self.hideVideoCallConfirmation(calledFrom: "handleGroupVideoCall")
+               callback()
+           }
         }
     }
 
     private func handleP2PVideoCall(details: RoomDetails, userId: String, callback: @escaping () -> Void) {
         guard let members = details.members, !members.isEmpty else {
-            callback() // handle the case where there are no members
              DispatchQueue.main.async {
-                   self.hideVideoCallConfirmation()
+                   self.hideVideoCallConfirmation(calledFrom: "handleP2PVideoCall")
+                   callback() // handle the case where there are no members
              }
             return
         }
 
-        for user in members where user.userId == userId {
-            if let status = user.status, ["cancel", "declined", "removed", "unanswered", "accepted"].contains(status) {
-                callback()
-                DispatchQueue.main.async {
-                    self.hideVideoCallConfirmation()
-                }
-                return
-            }
+        if shouldAbortCall(for: members, userId: userId) {
+           DispatchQueue.main.async {
+               self.hideVideoCallConfirmation(calledFrom: "handleP2PVideoCall")
+               callback()
+           }
         }
     }
 
-    public func hideVideoCallConfirmation() {
-        print("Hiding video call confirmation.")
+    public func hideVideoCallConfirmation(calledFrom: String) {
+        print("Hiding video call confirmation: \(calledFrom)")
         let notificationCenter = UNUserNotificationCenter.current()
         notificationCenter.removeDeliveredNotifications(withIdentifiers: ["2"])
         removeListener()
+    }
+    
+    private func shouldAbortCall(for members: [User], userId: String) -> Bool {
+        return members.contains { $0.userId == userId && $0.status.flatMap(CallStatus.init) != nil }
     }
     
     private func removeListener() {
@@ -149,4 +149,8 @@ class User {
         self.userId = userId
         self.status = dictionary["status"] as? String
     }
+}
+
+enum CallStatus: String {
+    case cancel, declined, removed, unanswered, accepted
 }

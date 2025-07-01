@@ -13,7 +13,7 @@ import FirebaseCore
 public class CallKitVoipPlugin: CAPPlugin {
 
     private var provider: CXProvider?
-    private let voipRegistry = PKPushRegistry(queue: nil)
+    private let voipRegistry = PKPushRegistry(queue: DispatchQueue(label: "com.lifesherpa.voip.push"))
     private var connectionIdRegistry: [UUID: CallConfig] = [:]
     private var uuid: UUID?
     private var voipToken: String?
@@ -23,6 +23,8 @@ public class CallKitVoipPlugin: CAPPlugin {
     private var answeredFromOtherDevices: String?
     private let registryAccessQueue = DispatchQueue(label: "registryAccessQueue") // Serial queue for thread safety
     private let firebaseAuthQueue = DispatchQueue(label: "firebaseAuthQueue")
+    private var abortedCallRegistry = Set<UUID>()
+    private let abortedCallQueue = DispatchQueue(label: "abortedCallQueue")
 
     override public func load() {
         voipRegistry.delegate = self
@@ -157,15 +159,28 @@ public class CallKitVoipPlugin: CAPPlugin {
         }
     }
 
-    public func endCall(uuid: UUID) {
+   public func endCall(uuid: UUID) {
+        let callObserver = CXCallObserver()
+        let activeCalls = callObserver.calls
+
+        guard activeCalls.contains(where: { $0.uuid == uuid }) else {
+            NSLog("⚠️ Call UUID not found in active calls. Skipping endCall.")
+            return
+        }
+
         let controller = CXCallController()
-        let transaction = CXTransaction(action: CXEndCallAction(call: uuid))
+        let endAction = CXEndCallAction(call: uuid)
+        let transaction = CXTransaction(action: endAction)
+
         controller.request(transaction) { error in
             if let error = error {
-                NSLog("Error ending call: \(error.localizedDescription)") // Log errors.
+                NSLog("❌ Error ending call: \(error.localizedDescription)")
+            } else {
+                NSLog("✅ Call successfully ended with UUID: \(uuid.uuidString)")
             }
         }
     }
+
 
     @objc func abortCall(_ call: CAPPluginCall) {
         guard let callUUID = uuid else {
@@ -176,12 +191,26 @@ public class CallKitVoipPlugin: CAPPlugin {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.endCall(uuid: callUUID)
-            self.realTimeDataService.hideVideoCallConfirmation()
+            self.realTimeDataService.hideVideoCallConfirmation(calledFrom: "abortCall")
             call.resolve()
         }
     }
 
     private func abortCall(with uuid: UUID) {
+        var alreadyAborted = false
+        abortedCallQueue.sync {
+            alreadyAborted = abortedCallRegistry.contains(uuid)
+            if !alreadyAborted {
+                abortedCallRegistry.insert(uuid)
+            }
+        }
+
+        if alreadyAborted {
+            NSLog("⏭️ Abort skipped: already aborted for UUID: \(uuid)")
+            return
+        }
+
+        NSLog("🚫 Aborting call for UUID: \(uuid)")
         answeredFromOtherDevices = "answeredFromOtherDevice"
         endCall(uuid: uuid)
     }
@@ -202,11 +231,19 @@ extension CallKitVoipPlugin: CXProviderDelegate {
 
     public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
         uuid = action.callUUID
-        realTimeDataService.hideVideoCallConfirmation()
+        realTimeDataService.hideVideoCallConfirmation(calledFrom: "CXEndCallAction")
+        
         if answeredFromOtherDevices != "answeredFromOtherDevice" {
             notifyEvent(eventName: "callEnded", uuid: action.callUUID)
         }
+        
         answeredFromOtherDevices = nil // Reset flag
+        
+        // Cleanup aborted UUID registry
+        abortedCallQueue.async { [uuid = action.callUUID] in
+           self.abortedCallRegistry.remove(uuid)
+        }
+        
         action.fulfill()
     }
 
@@ -294,17 +331,33 @@ extension CallKitVoipPlugin: PKPushRegistryDelegate {
                 print("Firebase user not found")
                 return
             }
+            
+            let callStartTime = Date()
+
             DispatchQueue.main.async {
                 self.realTimeDataService.handleRealtimeListener(
                     orgId: payload.dictionaryPayload["organization"] as? String ?? "Anonymous",
                     userId: user.uid,
                     roomName: payload.dictionaryPayload["roomname"] as? String ?? "Anonymous"
                 ) { [weak self] in
-                    guard let self = self else { return } // Safely access self
-                    NSLog("Data changed, aborting call.")
-                    self.abortCall(with: callUUID)
+                    guard let self = self else { return }
+
+                    // Wait at least 3 seconds since call started
+                    let elapsed = Date().timeIntervalSince(callStartTime)
+                    if elapsed < 3 {
+                        NSLog("Delaying abort: call started \(elapsed)s ago.")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + (3 - elapsed)) {
+                            NSLog("Aborting call after delay.")
+                            self.abortCall(with: callUUID)
+                        }
+                    } else {
+                        NSLog("Aborting call immediately.")
+                        self.abortCall(with: callUUID)
+                    }
                 }
             }
+
+
         }
     }
 }
