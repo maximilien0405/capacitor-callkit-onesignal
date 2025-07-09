@@ -73,7 +73,7 @@ class RealTimeDataService {
         if shouldAbortCall(for: members, userId: userId) {
            DispatchQueue.main.async {
                self.hideVideoCallConfirmation(calledFrom: "handleGroupVideoCall")
-               callback()
+//               callback()
            }
         }
     }
@@ -90,7 +90,7 @@ class RealTimeDataService {
         if shouldAbortCall(for: members, userId: userId) {
            DispatchQueue.main.async {
                self.hideVideoCallConfirmation(calledFrom: "handleP2PVideoCall")
-               callback()
+//               callback()
            }
         }
     }

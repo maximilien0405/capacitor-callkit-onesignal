@@ -15,7 +15,6 @@ public class CallKitVoipPlugin: CAPPlugin {
     private var provider: CXProvider?
     private let voipRegistry = PKPushRegistry(queue: DispatchQueue(label: "com.lifesherpa.voip.push"))
     private var connectionIdRegistry: [UUID: CallConfig] = [:]
-    private var uuid: UUID?
     private var voipToken: String?
     var hasRegisteredListener = false
     var lastNotifiedToken: String? = nil
@@ -149,7 +148,7 @@ public class CallKitVoipPlugin: CAPPlugin {
                     "connectionId": config.connectionId, "username": config.username, "callerId": config.callerId,
                     "group": config.group, "message": config.message, "organization": config.organization,
                     "roomname": config.roomname, "source": config.source, "title": config.title, "type": config.type,
-                    "duration": config.duration, "media": config.media
+                    "duration": config.duration, "media": config.media, "uuid": uuid.uuidString
                 ])
             }
             self.registryAccessQueue.async(flags: .barrier) { [weak self] in //nested call
@@ -183,11 +182,12 @@ public class CallKitVoipPlugin: CAPPlugin {
 
 
     @objc func abortCall(_ call: CAPPluginCall) {
-        guard let callUUID = uuid else {
-            print("No active call to abort")
-            call.resolve()
+        guard let uuidString = call.getString("uuid"),
+              let callUUID = UUID(uuidString: uuidString) else {
+            call.reject("Valid UUID string is required.")
             return
         }
+
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.endCall(uuid: callUUID)
@@ -224,13 +224,11 @@ extension CallKitVoipPlugin: CXProviderDelegate {
     }
 
     public func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
-        uuid = action.callUUID
         notifyEvent(eventName: "callAnswered", uuid: action.callUUID)
         action.fulfill()
     }
 
     public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
-        uuid = action.callUUID
         realTimeDataService.hideVideoCallConfirmation(calledFrom: "CXEndCallAction")
         
         if answeredFromOtherDevices != "answeredFromOtherDevice" {
@@ -248,7 +246,6 @@ extension CallKitVoipPlugin: CXProviderDelegate {
     }
 
     public func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
-        uuid = action.callUUID
         notifyEvent(eventName: "callStarted", uuid: action.callUUID)
         action.fulfill()
     }
@@ -261,7 +258,6 @@ extension CallKitVoipPlugin: PKPushRegistryDelegate {
         let token = pushCredentials.token.map { String(format: "%02.2hhx", $0) }.joined()
         print("Token: \(token)")
         voipToken = token
-//        notifyListeners("registration", data: ["value": token])"
         // Only notify if the token is new and JS listener is ready
         if hasRegisteredListener && token != lastNotifiedToken {
             lastNotifiedToken = token
