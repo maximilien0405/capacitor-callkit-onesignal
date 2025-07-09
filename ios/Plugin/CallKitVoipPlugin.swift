@@ -278,8 +278,6 @@ extension CallKitVoipPlugin: PKPushRegistryDelegate {
 
         let username = payload.dictionaryPayload["Username"] as? String ?? "Anonymous"
         let callUUID = UUID()
-        uuid = callUUID
-
         let config = CallConfig(
                 connectionId: callerId, username: username, callerId: callerId,
                 group: payload.dictionaryPayload["group"] as? String ?? "Anonymous",
