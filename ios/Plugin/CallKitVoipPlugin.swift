@@ -13,7 +13,7 @@ import FirebaseCore
 public class CallKitVoipPlugin: CAPPlugin {
 
     private var provider: CXProvider?
-    private let voipRegistry = PKPushRegistry(queue: DispatchQueue(label: "com.lifesherpa.voip.push"))
+    private let voipRegistry = PKPushRegistry(queue: nil)
     private var connectionIdRegistry: [UUID: CallConfig] = [:]
     private var voipToken: String?
     var hasRegisteredListener = false
