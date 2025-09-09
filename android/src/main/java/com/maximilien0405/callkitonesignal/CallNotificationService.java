@@ -1,4 +1,4 @@
-package com.bfine.capactior.callkitvoip;
+package com.maximilien0405.callkitonesignal;
 
 import android.annotation.SuppressLint;
 import android.app.KeyguardManager;
@@ -26,7 +26,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
-import com.bfine.capactior.callkitvoip.R;
+import com.maximilien0405.callkitonesignal.R;
 
 import java.util.Objects;
 import java.util.Timer;
@@ -205,6 +205,7 @@ public int onStartCommand(Intent intent, int flags, int startId) {
         name =data.getString("inititator");
         callType ="Video";
         callerId = intent.getStringExtra("callerId");
+        username = intent.getStringExtra("Username");
         group = intent.getStringExtra("group");
         message = intent.getStringExtra("message");
         organization = intent.getStringExtra("organization");
@@ -217,19 +218,19 @@ public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("onStartCommand!!", roomname);
     }
     try {
-
-        Class<?> mainAppClass = Class.forName("com.lsportal.migration.MainApplication");
-        Object mainAppInstance = mainAppClass.getMethod("getInstance").invoke(null);
-        Intent receiveCallAction = (Intent) mainAppClass.getMethod("getLaunchMainActivity").invoke(mainAppInstance);;
-        
-
-        // Intent receiveCallAction = new Intent(getApplicationContext(), mainAppClass);
+        // Create a generic intent to launch the main activity
+        Intent receiveCallAction = new Intent();
+        receiveCallAction.setPackage(getApplicationContext().getPackageName());
+        receiveCallAction.setAction(Intent.ACTION_MAIN);
+        receiveCallAction.addCategory(Intent.CATEGORY_LAUNCHER);
+        receiveCallAction.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
         receiveCallAction.putExtra("ConstantApp.CALL_RESPONSE_ACTION_KEY", "ConstantApp.CALL_RECEIVE_ACTION");
         receiveCallAction.putExtra("ACTION_TYPE", "RECEIVE_CALL");
         receiveCallAction.putExtra("NOTIFICATION_ID",NOTIFICATION_ID);
         receiveCallAction.putExtra("eventName", "callAnswered");
         receiveCallAction.putExtra("callerId", callerId);
+        receiveCallAction.putExtra("Username", username);
         receiveCallAction.putExtra("group", group);
         receiveCallAction.putExtra("message", message);
         receiveCallAction.putExtra("organization", organization);
@@ -248,6 +249,7 @@ public int onStartCommand(Intent intent, int flags, int startId) {
         cancelCallAction.putExtra("NOTIFICATION_ID",NOTIFICATION_ID);
         cancelCallAction.putExtra("eventName", "callEnded");
         cancelCallAction.putExtra("callerId", callerId);
+        cancelCallAction.putExtra("Username", username);
         cancelCallAction.putExtra("group", group);
         cancelCallAction.putExtra("message", message);
         cancelCallAction.putExtra("organization", organization);
@@ -265,6 +267,7 @@ public int onStartCommand(Intent intent, int flags, int startId) {
         callDialogAction.putExtra("NOTIFICATION_ID",NOTIFICATION_ID);
         callDialogAction.putExtra("eventName", "callStarted");
         callDialogAction.putExtra("callerId", callerId);
+        callDialogAction.putExtra("Username", username);
         callDialogAction.putExtra("group", group);
         callDialogAction.putExtra("message", message);
         callDialogAction.putExtra("organization", organization);

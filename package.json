@@ -1,7 +1,7 @@
 {
-  "name": "callkit-voip-capacitor-plugin",
-  "version": "1.2.3",
-  "description": "Provide CallKit and PushKit functionality to capacitor on iOS & android",
+  "name": "@maximilien0405/capacitor-callkit-onesignal",
+  "version": "0.0.1",
+  "description": "CallKit and PushKit functionality for Capacitor with OneSignal support on iOS & Android",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -10,25 +10,29 @@
     "android/src/main/",
     "android/build.gradle",
     "dist/",
-    "ios/Plugin/",
-    "CallkitVoipCapacitorPlugin.podspec"
+    "ios/Sources/",
+    "ios/Tests/",
+    "Package.swift",
+    "Maximilien0405CapacitorCallkitVoip.podspec"
   ],
-  "author": "abhiranjanchaurasia",
+  "author": "maximilien0405",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Abhiranjanchaurasia/callkit-voip-capacitor-plugin.git"
+    "url": "git+https://github.com/maximilien0405/capacitor-callkit-onesignal.git"
   },
   "bugs": {
-    "url": "https://github.com/Abhiranjanchaurasia/callkit-voip-capacitor-plugin.git/issues"
-  },
-  "publishConfig": {
-    "Abhiranjanchaurasia:registry": "https://npm.pkg.github.com"
+    "url": "https://github.com/maximilien0405/capacitor-callkit-onesignal/issues"
   },
   "keywords": [
     "capacitor",
     "plugin",
-    "native"
+    "callkit",
+    "pushkit",
+    "voip",
+    "onesignal",
+    "ios",
+    "android"
   ],
   "scripts": {
     "verify": "npm run verify:ios && npm run verify:android && npm run verify:web",
@@ -47,25 +51,23 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@capacitor/android": "^6.1.0",
-    "@capacitor/core": "^6.1.0",
-    "@capacitor/docgen": "^0.2.2",
-    "@capacitor/ios": "^6.1.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/docgen": "^0.3.0",
+    "@capacitor/ios": "^7.0.0",
     "@ionic/eslint-config": "^0.4.0",
     "@ionic/prettier-config": "^4.0.0",
-    "@ionic/swiftlint-config": "^1.1.2",
-    "@types/node": "^20.14.10",
-    "@types/vinyl": "^2.0.12",
-    "eslint": "^9.6.0",
-    "prettier": "^3.3.2",
-    "prettier-plugin-java": "^2.6.0",
-    "rimraf": "^6.0.0",
-    "rollup": "^4.18.1",
-    "swiftlint": "^1.0.1",
-    "typescript": "^5.5.3"
+    "@ionic/swiftlint-config": "^2.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-java": "^2.6.6",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.30.1",
+    "swiftlint": "^2.0.0",
+    "typescript": "~4.1.5"
   },
   "peerDependencies": {
-    "@capacitor/core": "^6.1.0"
+    "@capacitor/core": ">=7.0.0"
   },
   "prettier": "@ionic/prettier-config",
   "swiftlint": "@ionic/swiftlint-config",
@@ -79,9 +81,5 @@
     "android": {
       "src": "android"
     }
-  },
-  "dependencies": {
-    "@capacitor/cli": "^6.1.0",
-    "@rollup/plugin-json": "^6.1.0"
   }
 }

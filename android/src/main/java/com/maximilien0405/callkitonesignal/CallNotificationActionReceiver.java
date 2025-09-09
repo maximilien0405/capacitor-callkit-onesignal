@@ -1,4 +1,4 @@
-package com.bfine.capactior.callkitvoip;
+package com.maximilien0405.callkitonesignal;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
@@ -12,7 +12,7 @@ import android.media.MediaPlayer;
 import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 
-import com.bfine.capactior.callkitvoip.CallKitVoipPlugin;
+import com.maximilien0405.callkitonesignal.CallKitVoipPlugin;
 
 public class CallNotificationActionReceiver extends BroadcastReceiver {
 
@@ -26,6 +26,7 @@ public class CallNotificationActionReceiver extends BroadcastReceiver {
         
             String action = intent.getStringExtra("ACTION_TYPE");
             String callerId = intent.getStringExtra("callerId");
+            String username = intent.getStringExtra("Username");
             String group = intent.getStringExtra("group");
             String message = intent.getStringExtra("message");
             String organization = intent.getStringExtra("organization");
@@ -71,7 +72,8 @@ public class CallNotificationActionReceiver extends BroadcastReceiver {
         } else {
             eventName = "callEnded";
         }
-        instance.notifyEvent(eventName, callerId, group, message, organization, roomname, source, title, type, duration, media);
+        // No uuid available on Android right now; pass null
+        instance.notifyEvent(eventName, callerId, username, group, message, organization, roomname, source, title, type, duration, media, null);
     }
 
     private Boolean checkAppPermissions() {

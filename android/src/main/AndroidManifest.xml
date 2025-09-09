@@ -11,7 +11,7 @@
     <application>
         <!-- Incoming call  -->
         <receiver
-            android:name=".CallNotificationActionReceiver"
+            android:name="com.maximilien0405.callkitonesignal.CallNotificationActionReceiver"
             android:enabled="true"
             android:exported="true"
             >
@@ -21,12 +21,18 @@
             </intent-filter>
         </receiver>
         <service
-            android:name=".CallNotificationService"
+            android:name="com.maximilien0405.callkitonesignal.CallNotificationService"
             android:enabled="true"
             android:stopWithTask="true"
             android:exported="true"
             android:foregroundServiceType="phoneCall"
             android:permission="android.permission.FOREGROUND_SERVICE">
         </service>
+
+        <!-- OneSignal NotificationExtenderService to handle data-only VoIP pushes -->
+        <service
+            android:name="com.maximilien0405.callkitonesignal.OneSignalVoipExtenderService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>

@@ -19,7 +19,7 @@ apply plugin: 'com.android.library'
 
 android {
     // namespace "sa.ihorizon.public.callkitvoip"
-    namespace "com.bfine.capactior.callkitvoip"
+    namespace "com.maximilien0405.callkitonesignal"
     compileSdkVersion project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 34
     defaultConfig {
         minSdkVersion project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion : 26
@@ -53,6 +53,7 @@ dependencies {
     implementation project(':capacitor-android')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation 'com.google.android.gms:play-services-tasks:17.2.1'
+    implementation 'com.onesignal:OneSignal:[5.0.0, 5.99.99]'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

@@ -1,271 +1,268 @@
-# capacitor-plugin-callkit-voip
-## Install
+# Capacitor CallKit OneSignal Plugin
 
-1. Install plugin
+A Capacitor plugin that provides CallKit and PushKit functionality for VoIP calls with OneSignal support on iOS and Android.
+
+## Features
+
+- 📱 **CallKit Integration** - Native iOS call interface
+- 🔔 **PushKit VoIP** - Background VoIP push notifications
+- 📲 **OneSignal Support** - Seamless integration with OneSignal
+- 🎯 **Cross-Platform** - Works on both iOS and Android
+- 🔒 **Secure** - Proper permission handling and security
+
+## Installation
+
 ```bash
-npm i capacitor-plugin-callkit-voip
-ionic cap sync
+npm install @maximilien0405/capacitor-callkit-onesignal
 ```
 
-2. Xcode Project > Capabilities pane. Select the checkbox for Voice over IP, as shown in Image
+### iOS Setup
 
-![](https://miro.medium.com/max/700/1*zVc9U601x_qUqweRKfsfow.png)
+1. Add the plugin to your `capacitor.config.ts`:
 
-3. Register certificate on  [developer.apple.com/certificates](https://developer.apple.com/certificates)
+```typescript
+import { CapacitorConfig } from '@capacitor/cli';
 
-![](https://miro.medium.com/max/700/1*Z2q66Vo2Emho4_IVXRN8GQ.png)
-
-4. Download the certificate and open it to import it into the Keychain Access app.
-
-5. Export certificates as shown bellow
-
-![](https://miro.medium.com/max/700/1*7N7d7-dEa6WAMzWbFXO66A.png)
-
-6. Now, navigate to the folder where you exported this file and execute following command:
-```bash
-openssl pkcs12 -in YOUR_CERTIFICATES.p12 -out app.pem -nodes -clcerts
+const config: CapacitorConfig = {
+  appId: 'com.example.app',
+  appName: 'My App',
+  webDir: 'dist',
+  plugins: {
+    CallkitOnesignal: {
+      // Plugin configuration
+    }
+  }
+};
 ```
 
-7. You will receive `app.pem` certificate file that can be used to send VOIP notification (you can use my script bellow)
+2. Add required permissions to your `ios/App/App/Info.plist`:
+
+```xml
+<key>UIBackgroundModes</key>
+<array>
+    <string>voip</string>
+    <string>background-processing</string>
+</array>
+```
+
+3. Enable CallKit capability in Xcode:
+   - Open your project in Xcode
+   - Select your app target
+   - Go to "Signing & Capabilities"
+   - Add "Background Modes" capability
+   - Enable "Voice over IP"
+
+### Android Setup
+
+1. **Permissions are automatically added** - The plugin includes all required permissions in its manifest, which Capacitor automatically merges into your app.
+
+2. Add OneSignal configuration to your `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<service
+    android:name="com.maximilien0405.callkitonesignal.OneSignalVoipExtenderService"
+    android:exported="false"
+    android:permission="android.permission.BIND_JOB_SERVICE" />
+```
 
 ## Usage
 
-To make this plugin work, you need to call `.register()` method and then you can use API bellow.
+### Basic Setup
 
 ```typescript
-import {CallKitVoip} from "capacitor-plugin-callkit-voip"
+import { CallkitOnesignal } from '@maximilien0405/capacitor-callkit-onesignal';
 
+// Register for VoIP notifications
+await CallkitOnesignal.register();
 
-async function registerCallKit(){
+// Listen for incoming calls
+CallkitOnesignal.addListener('incoming', (callData) => {
+  console.log('Incoming call from:', callData.username);
+  console.log('Call type:', callData.media);
+  console.log('Call UUID:', callData.uuid);
+});
 
-  // Register plugin of VOIP notifications 
-    await CallKitVoip.register(); // can be used with `.then()`
-    console.log("Push notification has been registered")
-  
-    // Voip Token has been generated 
-    CallKitVoip.addListener("registration", (token:CallToken) =>
-      console.log(`VOIP token has been received ${token.value}`)
-    );
-  
-    // Notify Incoming Call Accepted
-    CallKitVoip.addListener("callAnswered", (data:CallData) => 
-      console.log(`Call has been received from ${call.name} (call ID: ${data.id}) (call Type: ${data.media}) (call duration: ${data.duration})`)
-    );
+// Listen for call events
+CallkitOnesignal.addListener('callAnswered', (callData) => {
+  console.log('Call answered:', callData.uuid);
+});
 
-    // Notify Call Ended
-    CallKitVoip.addListener("callEnded", (data:CallData) =>
-      console.log(`Call has been ended ${call.name} (call ID: ${data.id}) (call Type: ${data.media}) (call duration: ${data.duration})`)
-    );
+CallkitOnesignal.addListener('callEnded', (callData) => {
+  console.log('Call ended:', callData.uuid);
+});
 
-    // Notify Call Started
-    CallKitVoip.addListener("callStarted", (data:CallData) =>
-      console.log(`Call has been started with ${call.name} (call ID: ${data.id}) (call Type: ${data.media}) (call duration: ${data.duration})`)
-     );
-  
+// Listen for VoIP token registration
+CallkitOnesignal.addListener('registration', (token) => {
+  console.log('VoIP token:', token.value);
+  // Send this token to your server for push notifications
+});
+```
+
+### API Reference
+
+#### Methods
+
+##### `register()`
+Register for VoIP notifications and start listening for incoming calls.
+
+```typescript
+await CallkitOnesignal.register();
+```
+
+##### `abortCall(options)`
+Abort an ongoing call.
+
+```typescript
+await CallkitOnesignal.abortCall({ uuid: 'call-uuid-here' });
+```
+
+##### `getApnsEnvironment()`
+Get the current APNs environment (debug or production).
+
+```typescript
+const { environment } = await CallkitOnesignal.getApnsEnvironment();
+console.log('APNs environment:', environment); // 'debug' or 'production'
+```
+
+#### Events
+
+##### `incoming`
+Fired when an incoming call is received.
+
+```typescript
+CallkitOnesignal.addListener('incoming', (callData: CallData) => {
+  // Handle incoming call
+});
+```
+
+##### `registration`
+Fired when VoIP token is registered.
+
+```typescript
+CallkitOnesignal.addListener('registration', (token: CallToken) => {
+  // Handle token registration
+});
+```
+
+##### `callAnswered`
+Fired when a call is answered.
+
+```typescript
+CallkitOnesignal.addListener('callAnswered', (callData: CallData) => {
+  // Handle call answered
+});
+```
+
+##### `callStarted`
+Fired when a call is started.
+
+```typescript
+CallkitOnesignal.addListener('callStarted', (callData: CallData) => {
+  // Handle call started
+});
+```
+
+##### `callEnded`
+Fired when a call is ended.
+
+```typescript
+CallkitOnesignal.addListener('callEnded', (callData: CallData) => {
+  // Handle call ended
+});
+```
+
+#### Types
+
+```typescript
+interface CallData {
+  connectionId: string;    // Unique connection identifier
+  username: string;        // Display name of the caller
+  callerId: string;        // Caller identifier
+  group: string;           // Group or team identifier
+  message: string;         // Call message or description
+  organization: string;    // Organization name
+  roomname: string;        // Room or meeting identifier
+  source: string;          // Source of the call
+  title: string;           // Call title
+  type: string;            // Call type
+  duration: string;        // Call duration in seconds
+  media: 'video' | 'audio'; // Media type
+  uuid?: string;           // Unique call UUID
+}
+
+interface CallToken {
+  value: string;           // VoIP Push Token
 }
 ```
 
-Once the plugin is installed, the only thing that you need to do is to push a VOIP notification with the following data payload structure:
+## OneSignal Integration
+
+### iOS
+
+1. Configure OneSignal with VoIP capability
+2. Send VoIP push notifications with the following payload structure:
 
 ```json
 {
-    "name"         : "Display Name",
-    "id"           : "Unique Call ID",
-    "media"        : "Call Type: audio or video",
-    "duration"     : "Call duration"
+  "aps": {
+    "content-available": 1
+  },
+  "callerId": "user123",
+  "Username": "John Doe",
+  "group": "team1",
+  "message": "Incoming video call",
+  "organization": "My Company",
+  "roomname": "meeting-room-1",
+  "source": "mobile",
+  "title": "Incoming Call",
+  "type": "video",
+  "duration": "60",
+  "media": "video"
 }
 ```
 
-You can use my script (bellow) to test it out:
-`./sendVoip.sh <media> <id> <name> <duration> <token>`
+### Android
 
-### sendVoip.sh:
-```shell
-#!/bin/bash
+1. Configure OneSignal with the provided `OneSignalVoipExtenderService`
+2. Send data-only push notifications with the same payload structure
+3. The service will automatically handle the call UI
 
-function main {
-    media=${1:-"audio"}
-    id=${2:?"Caller ID should be specified"}
-    name=${3:-"Unknown"}
-    duration=${4:-0}
-    token=${5:?"Enter device token that you received on register listener"}
+## Troubleshooting
 
-    curl -v \
-    -d "{\"aps\":{\"alert\":\"Incoming call\", \"content-available\":\"1\"}, \"media\": \"${media}\", \"id\": \"${id}\", \"name\": \"${name}\", \"duration\": \"${duration}\", \"token\": \"${token}\"}" \
-    -H "apns-topic: <YOUR_BUNDLE_ID>.voip" \
-    -H "apns-push-type: voip" \
-    -H "apns-priority: 10" \
-    --http2 \
-    --cert app.pem \
-"https://api.development.push.apple.com/3/device/${token}"
-}
+### Common Issues
 
-main $@
-```
+1. **VoIP token not received**
+   - Ensure proper iOS capabilities are enabled
+   - Check that the app is properly signed
+   - Verify OneSignal configuration
 
-### Pay attention:
+2. **Calls not showing on Android**
+   - Check notification permissions
+   - Verify OneSignal extender service is configured
+   - Ensure proper Android permissions
 
-- replace  <YOUR_BUNDLE_ID> with your app bundle
-- ensure that you are using correct voip certificate (specified in `--cert app.pem`)
-- if you'll go to production version, you will need to do request to `api.push.apple.com/3/device/${token}` instead of
-  `api.development.push.apple.com/3/device/${token}`, otherwise you will receive `BadDeviceToken` issue
+3. **CallKit not working on iOS**
+   - Verify CallKit capability is enabled
+   - Check that the app is running on a physical device (not simulator)
+   - Ensure proper iOS version (iOS 10+)
 
-If you will have some complication, feel free to write me email at [kin9aziz@gmail.com](mailto:kin9aziz@gmail.com?subject=Plugin%20issue%20%23capacitor-callkit-voip%20%23gitlab&body=Hello%20Yurii%2C%0D%0AI%20faced%20with%20the%20problem%20...%0D%0A...%0D%0A%0D%0AYou%20may%20contact%20me%20at%20WhatsApp%3A%20....%20or%20Telegram%3A%20....%20or%20...)
+### Debug Mode
 
-
-
-## API
-
-* [`register()`](#register)
-* [`addListener("registration", handler)`](#addlistener)
-* [`addListener("callAnswered", handler)`](#addlistener)
-* [`addListener("callStarted", handler)`](#addlistener)
-* [`addListener("callEnded", handler)`](#addlistener)
-* [Interfaces](#interfaces)
-
-<!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
-
-### register()
-Register your device to receive VOIP push notifications.
-After registration it will call 'registration' listener (bellow) that returns VOIP token.
-```typescript
-import {CallKitVoip} from "capacitor-plugin-callkit-voip"
-//...
-await CallKitVoip.register();
-// or
-CallKitVoip.register().then(() => {
-    // Do something after registration
-});
-```
-
-**Returns:** <code>void</code>
-
---------------------
-
-
-### addListener("registration", handler)
-
-Adds listener on registration. When device will be registered to receiving VOIP push notifications, `listenerFunc` will be called.
-
-As usually, it's called after `.register()` function
+Enable debug logging by checking the APNs environment:
 
 ```typescript
-import { CallKitVoip, CallToken } from "capacitor-plugin-callkit-voip"
-//...
-CallKitVoip.addListener("registration", (token:CallToken) => {
-    // do something with token 
-    console.log(`VOIP token has been received ${token.value}`)
-});
+const { environment } = await CallkitOnesignal.getApnsEnvironment();
+console.log('Running in:', environment, 'mode');
 ```
 
-| Param              | Type                                                      |
-| ------------------ |-----------------------------------------------------------|
-| **`eventName`**    | <code>"registration"</code>                               |
-| **`listenerFunc`** | <code>(data: <a href="#token">CallToken</a>) =&gt; void</code> |
+## License
 
-**Returns:** <code>any</code>
+MIT
 
---------------------
+## Contributing
 
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### addListener("callAnswered", handler)
+## Support
 
-Adds listener to handle when user answers on call.
-
-
-```typescript
-import { CallKitVoip, CallData } from "capacitor-plugin-callkit-voip"
-//...
-CallKitVoip.addListener("callAnswered", (data:CallData) => {
-  // handle call (e.g. redirect it to specific page with call)
-  console.log(`Call has been received from ${call.name} (call ID: ${data.id}) (call Type: ${data.media}) (call duration: ${data.duration})`)
-});
-```
-
-| Param              | Type                                                         |
-| ------------------ |--------------------------------------------------------------|
-| **`eventName`**    | <code>"callAnswered"</code>                                  |
-| **`listenerFunc`** | <code>(call: <a href="#data">CallData</a>) =&gt; void</code> |
-
-**Returns:** <code>void</code>
-
---------------------
-
-
-### addListener("callStarted", handler)
-
-Adds listener to handle call starting, you can handle it directly in your app
-
-```typescript
-import { CallKitVoip, CallData } from "capacitor-plugin-callkit-voip"
-//...
-CallKitVoip.addListener("callAnswered", (data:CallData) => {
-  // handle call (e.g. redirect it to specific page with call)
-  console.log(`Call has been received from ${call.name} (call ID: ${data.id}) (call Type: ${data.media}) (call duration: ${data.duration})`)
-});
-```
-
-| Param              | Type                                                         |
-| ------------------ |--------------------------------------------------------------|
-| **`eventName`**    | <code>"callStarted"</code>                                   |
-| **`listenerFunc`** | <code>(call: <a href="#data">CallData</a>) =&gt; void</code> |
-
-**Returns:** <code>any</code>
-
---------------------
-
-### addListener("callEnded", handler)
-
-Adds listener to handle end call, you can handle it directly in your app
-
-```typescript
-import { CallKitVoip, CallData } from "capacitor-plugin-callkit-voip"
-//...
-CallKitVoip.addListener("callEnded", (data:CallData) => {
-        console.log(`Call has been ended ${call.name} (call ID: ${data.id}) (call Type: ${data.media}) (call duration: ${data.duration})`)
-});
-```
-
-| Param              | Type                                                         |
-| ------------------ |--------------------------------------------------------------|
-| **`eventName`**    | <code>"callStarted"</code>                                   |
-| **`listenerFunc`** | <code>(call: <a href="#data">CallData</a>) =&gt; void</code> |
-
-**Returns:** <code>any</code>
-
---------------------
-
-
-### Interfaces
-
-
-#### CallToken
-
-| Prop        | Type                         |
-|-------------|------------------------------|
-| **`token`** | <code>{value: string}</code> |
-
-
-#### PluginListenerHandle
-
-| Prop         | Type                      |
-| ------------ | ------------------------- |
-| **`remove`** | <code>() =&gt; any</code> |
-
-
-#### CallData
-
-| Prop               | Type                |
-| ------------------ | ------------------- |
-| **`connectionId`** | <code>string</code> |
-| **`username`**     | <code>string</code> |
-| **`callerId`**     | <code>string</code> |
-| **`group`**        | <code>string</code> |
-| **`message`**      | <code>string</code> |
-| **`organization`** | <code>string</code> |
-| **`roomname`**     | <code>string</code> |
-| **`source`**       | <code>string</code> |
-| **`title`**        | <code>string</code> |
-| **`type`**         | <code>string</code> |
-| **`duraion`**      | <code>string</code> |
-
+For support, please open an issue on GitHub or contact the maintainer.
