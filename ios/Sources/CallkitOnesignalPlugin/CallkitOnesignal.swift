@@ -9,8 +9,6 @@ import PushKit
     private let voipRegistry = PKPushRegistry(queue: nil)
     private var connectionIdRegistry: [UUID: CallConfig] = [:]
     private var voipToken: String?
-    var hasRegisteredListener = false
-    var lastNotifiedToken: String? = nil
     private var answeredFromOtherDevices: String?
     private let registryAccessQueue = DispatchQueue(label: "registryAccessQueue")
     private var abortedCallRegistry = Set<UUID>()
@@ -36,22 +34,10 @@ import PushKit
         provider?.setDelegate(self, queue: .main)
     }
     
-    @objc public func register() {
-        hasRegisteredListener = true
-        
-        if let token = voipToken, token != lastNotifiedToken {
-            lastNotifiedToken = token
-            pluginDelegate?.notifyRegistration(token: token)
-        }
+    @objc public func getToken() -> String? {
+        return voipToken
     }
     
-    @objc public func getApnsEnvironment() -> String {
-        #if DEBUG
-            return "debug"
-        #else
-            return "production"
-        #endif
-    }
     
     public func notifyEvent(eventName: String, uuid: UUID) {
         registryAccessQueue.async { [weak self] in
@@ -154,10 +140,6 @@ extension CallkitOnesignal: PKPushRegistryDelegate {
         let token = pushCredentials.token.map { String(format: "%02.2hhx", $0) }.joined()
         print("Token: \(token)")
         voipToken = token
-        if hasRegisteredListener && token != lastNotifiedToken {
-            lastNotifiedToken = token
-            pluginDelegate?.notifyRegistration(token: token)
-        }
     }
 
     public func pushRegistry(
@@ -276,6 +258,5 @@ extension CallkitOnesignal {
 }
 
 protocol CallkitOnesignalDelegate: AnyObject {
-    func notifyRegistration(token: String)
     func notifyEvent(eventName: String, data: [String: Any])
 }

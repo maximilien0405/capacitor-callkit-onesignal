@@ -10,8 +10,7 @@ public class CallkitOnesignalPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "CallkitOnesignalPlugin"
     public let jsName = "CallkitOnesignal"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "register", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "getApnsEnvironment", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getToken", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "abortCall", returnType: CAPPluginReturnPromise)
     ]
 
@@ -22,24 +21,18 @@ public class CallkitOnesignalPlugin: CAPPlugin, CAPBridgedPlugin {
         implementation.pluginDelegate = self
     }
 
-    @objc func register(_ call: CAPPluginCall) {
+    @objc func getToken(_ call: CAPPluginCall) {
         do {
-            implementation.register()
-            call.resolve()
+            if let token = implementation.getToken() {
+                call.resolve(["value": token])
+            } else {
+                call.reject("VoIP token not available yet. Please try again.")
+            }
         } catch {
-            call.reject("Failed to register for VoIP notifications: \(error.localizedDescription)")
+            call.reject("Failed to get VoIP token: \(error.localizedDescription)")
         }
     }
 
-    @objc func getApnsEnvironment(_ call: CAPPluginCall) {
-        do {
-            let environment = implementation.getApnsEnvironment()
-            print("🚀 APNs Environment Detected:", environment)
-            call.resolve(["environment": environment])
-        } catch {
-            call.reject("Failed to get APNs environment: \(error.localizedDescription)")
-        }
-    }
 
     @objc func abortCall(_ call: CAPPluginCall) {
         guard let uuidString = call.getString("uuid") else {
@@ -70,10 +63,6 @@ public class CallkitOnesignalPlugin: CAPPlugin, CAPBridgedPlugin {
 
 // MARK: CallkitOnesignalDelegate
 extension CallkitOnesignalPlugin: CallkitOnesignalDelegate {
-    
-    func notifyRegistration(token: String) {
-        notifyListeners("registration", data: ["value": token])
-    }
     
     func notifyEvent(eventName: String, data: [String: Any]) {
         notifyListeners(eventName, data: data)

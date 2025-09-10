@@ -1,18 +1,14 @@
 import { WebPlugin, PluginListenerHandle } from '@capacitor/core';
 
-import type { CallkitOnesignalPlugin } from './definitions';
+import type { CallkitOnesignalPlugin, CallToken } from './definitions';
 
 export class CallkitOnesignalWeb extends WebPlugin implements CallkitOnesignalPlugin {
-  async register(): Promise<void> {
-    return;
+  async getToken(): Promise<CallToken> {
+    throw new Error('getToken() is only available on iOS');
   }
 
   async abortCall(_options: { uuid: string }): Promise<void> {
     return;
-  }
-
-  async getApnsEnvironment(): Promise<{ environment: 'debug' | 'production' }> {
-    return { environment: 'debug' };
   }
 
   addListener(_eventName: string, _callback: (data: any) => void): Promise<PluginListenerHandle> & PluginListenerHandle {
@@ -29,9 +25,5 @@ export class CallkitOnesignalWeb extends WebPlugin implements CallkitOnesignalPl
     });
 
     return Object.assign(promise, handle);
-  }
-
-  async removeAllListeners(): Promise<void> {
-    return;
   }
 }

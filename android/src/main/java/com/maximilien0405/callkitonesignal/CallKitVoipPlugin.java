@@ -34,12 +34,6 @@ public class CallKitVoipPlugin extends Plugin {
         super.handleOnNewIntent(data);
     }
 
-    @PluginMethod
-    public void register(PluginCall call) {
-        Log.d("CallKitVoip","register");
-        Logger.debug("CallKit: Subscribed");
-        call.resolve();
-    }
     
     public void notifyEvent(String eventName, String callerId, String username, String group, String message, String organization, String roomname, String source, String title, String type, String duration, String media, String uuid){
        JSObject data = new JSObject();
@@ -69,16 +63,6 @@ public class CallKitVoipPlugin extends Plugin {
         return handler == null ? null : (CallKitVoipPlugin) handler.getInstance();
     }
 
-    // show_call_notification removed to align with iOS API. Use OneSignal extender to start UI.
-
-    @PluginMethod
-    public void getApnsEnvironment(PluginCall call) {
-        JSObject ret = new JSObject();
-        boolean isDebuggable = (getContext().getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
-        ret.put("environment", isDebuggable ? "debug" : "production");
-        call.resolve(ret);
-    }
-
     @PluginMethod
     public void abortCall(PluginCall call) {
         Log.d("abortCall","Called");
@@ -93,6 +77,4 @@ public class CallKitVoipPlugin extends Plugin {
         Intent serviceIntent = new Intent(context, CallNotificationService.class);
         context.stopService(serviceIntent);
     }
-
-    // isScreenLocked removed to align with iOS API.
 }

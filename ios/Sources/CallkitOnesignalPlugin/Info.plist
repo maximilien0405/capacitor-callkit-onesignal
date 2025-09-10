@@ -23,7 +23,7 @@
     <key>UIBackgroundModes</key>
     <array>
         <string>voip</string>
-        <string>background-processing</string>
+        <string>processing</string>
     </array>
     <key>UISupportedInterfaceOrientations</key>
     <array>

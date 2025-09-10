@@ -2,9 +2,9 @@ import type { PluginListenerHandle } from '@capacitor/core';
 
 export interface CallkitOnesignalPlugin {
   /**
-   * Register for VoIP notifications and start listening for incoming calls
+   * Get the VoIP push token (iOS only)
    */
-  register(): Promise<void>;
+  getToken(): Promise<CallToken>;
 
   /**
    * Abort an ongoing call
@@ -13,24 +13,11 @@ export interface CallkitOnesignalPlugin {
   abortCall(options: { uuid: string }): Promise<void>;
 
   /**
-   * Get the current APNs environment (debug or production)
-   */
-  getApnsEnvironment(): Promise<{ environment: 'debug' | 'production' }>;
-
-  /**
    * Listen for incoming call events
    */
   addListener(
     eventName: 'incoming',
     listenerFunc: (callData: CallData) => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle;
-
-  /**
-   * Listen for VoIP token registration events
-   */
-  addListener(
-    eventName: 'registration',
-    listenerFunc: (token: CallToken) => void
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
 
   /**
@@ -56,11 +43,6 @@ export interface CallkitOnesignalPlugin {
     eventName: 'callEnded',
     listenerFunc: (callData: CallData) => void
   ): Promise<PluginListenerHandle> & PluginListenerHandle;
-
-  /**
-   * Remove all listeners for this plugin
-   */
-  removeAllListeners(): Promise<void>;
 }
 
 export type CallType = 'video' | 'audio';
