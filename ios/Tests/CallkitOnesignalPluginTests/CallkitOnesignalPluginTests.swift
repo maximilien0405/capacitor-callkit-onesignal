@@ -32,7 +32,7 @@ class CallkitOnesignalPluginTests: XCTestCase {
         let environment = implementation.getApnsEnvironment()
         
         #if DEBUG
-        XCTAssertEqual(environment, "debug")
+        XCTAssertEqual(environment, "development")
         #else
         XCTAssertEqual(environment, "production")
         #endif
