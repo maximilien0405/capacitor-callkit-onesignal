@@ -10,7 +10,6 @@ import Network
     private static var sharedInstance: CallkitOnesignal?
         
     // Private Properties
-    
     weak var pluginDelegate: CallkitOnesignalDelegate?
     private var provider: CXProvider?
     private let voipRegistry = PKPushRegistry(queue: nil)
@@ -46,7 +45,6 @@ import Network
         
         return result
     }
-    
     // Initialization
     
     public override init() {
@@ -95,12 +93,6 @@ import Network
     }
     
     private func setupNotificationObservers() {
-        // NotificationCenter.default.addObserver(
-        //     self,
-        //     selector: #selector(appDidEnterBackground),
-        //     name: UIApplication.didEnterBackgroundNotification,
-        //     object: nil
-        // )
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(appWillEnterForeground),
@@ -112,6 +104,13 @@ import Network
             self,
             selector: #selector(audioRouteChanged),
             name: AVAudioSession.routeChangeNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCancelCallNotification),
+            name: NSNotification.Name("CancelCallNotificationReceived"),
             object: nil
         )
     }
@@ -130,7 +129,6 @@ import Network
             return
         }
         
-        // Only notify for specific route change reasons
         switch reason {
         case .newDeviceAvailable, .oldDeviceUnavailable, .categoryChange, .override:
             let currentRoute = getCurrentAudioRoute()
@@ -149,7 +147,15 @@ import Network
         }
     }
     
-    // User activity handling
+    @objc private func handleCancelCallNotification(notification: Notification) {
+        guard let userInfo = notification.userInfo else {
+            return
+        }
+        
+        NSLog("[CallkitOnesignal] Received cancel call notification: \(userInfo)")
+        endAllCalls()
+    }
+    
     
     private static func processPendingUserActivities() {
         pendingUserActivitiesQueue.async(flags: .barrier) {
@@ -241,13 +247,11 @@ import Network
         return voipToken
     }
     
-    /// Mark the app as fully loaded and ready to receive events
     @objc public func setAppFullyLoaded() {
         isAppFullyLoaded = true
         NSLog("[CallkitOnesignal] App marked as fully loaded - events will now be sent immediately")
     }
     
-    /// Send an event to the plugin delegate or store it as pending
     private func sendEvent(eventName: String, data: [String: Any]? = nil, uuid: UUID? = nil) {
         if let uuid = uuid {
             registryAccessQueue.async { [weak self] in
@@ -297,7 +301,6 @@ import Network
         }
     }
 
-    /// Returns the APNs environment (development or production)
     @objc public func getApnsEnvironment() -> String {
         #if DEBUG
         return "development"
@@ -306,7 +309,6 @@ import Network
         #endif
     }
 
-    /// Checks if the app was launched or resumed from a VoIP call
     @objc public func wasLaunchedFromVoIP() -> Bool {
         let callObserver = CXCallObserver()
         let activeCalls = callObserver.calls
@@ -327,7 +329,6 @@ import Network
         return wasLaunched
     }
 
-    /// Replays all pending events that were stored while the app was backgrounded
     @objc public func replayPendingEvents() {
         var events: [[String: Any]] = []
         
@@ -366,7 +367,6 @@ import Network
         }
     }
 
-    /// Starts an outgoing call with CallKit UI
     @objc public func startOutgoingCall(callerId: String, username: String, media: String) {
         let callObserver = CXCallObserver()
         let activeCalls = callObserver.calls
@@ -424,7 +424,6 @@ import Network
         }
     }    
     
-    /// Configures the audio session for VoIP calls with optional activation
     private func configureAudioSession(activate: Bool = false, forceTakeover: Bool = false) {
         do {
             let session = AVAudioSession.sharedInstance()
@@ -443,12 +442,10 @@ import Network
         }
     }
     
-    /// Prepares the audio session for an outgoing call
     @objc public func prepareAudioSessionForCall() {
         configureAudioSession(activate: false, forceTakeover: true)
     }
 
-    /// Updates the CallKit UI for an ongoing call
     @objc public func updateCallUI(uuid: UUID, media: String) {
         registryAccessQueue.async(flags: .barrier) { [weak self] in
             guard let self = self else { return }
@@ -480,7 +477,6 @@ import Network
         }
     }
 
-    /// Sets the audio output route for the current call
     @objc public func setAudioOutput(route: String) throws {
         guard isCallOngoing else {
             NSLog("[CallkitOnesignal] No ongoing call - skipping audio output configuration")
@@ -509,7 +505,6 @@ import Network
         }
     }
     
-    /// Gets the current audio route as a string
     private func getCurrentAudioRoute() -> String {
         let session = AVAudioSession.sharedInstance()
         let currentRoute = session.currentRoute
@@ -537,7 +532,6 @@ import Network
         return "earpiece"
     }
 
-    /// Ends all active CallKit calls
     public func endAllCalls() {
         let callObserver = CXCallObserver()
         let activeCalls = callObserver.calls
@@ -559,7 +553,6 @@ import Network
             }
         }
         
-        // Clean up all call state
         callStateQueue.async(flags: .barrier) { [weak self] in
             guard let self = self else { return }
             self.outgoingCalls.removeAll()
@@ -569,7 +562,6 @@ import Network
             NSLog("[CallkitOnesignal] Call state cleaned up")
         }
         
-        // Clean up call configurations
         registryAccessQueue.async(flags: .barrier) { [weak self] in
             guard let self = self else { return }
             let configCount = self.connectionIdRegistry.count
@@ -578,7 +570,6 @@ import Network
         }
     }
     
-    /// Sets the mute state for the current call and updates CallKit UI
     @objc public func setMuted(_ isMuted: Bool) {
         let callObserver = CXCallObserver()
         let activeCalls = callObserver.calls
@@ -602,7 +593,6 @@ import Network
         }
     }
     
-    /// Check if the app is truly in the foreground
     public func isAppInForeground() -> Bool {
         if Thread.isMainThread {
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -665,14 +655,12 @@ extension CallkitOnesignal: CXProviderDelegate {
         callStateQueue.async(flags: .barrier) { [weak self] in
             guard let self = self else { return }
             
-            // Track that this call was answered
             self.answeredCalls.insert(action.callUUID)
             self.outgoingCalls.remove(action.callUUID)
             
             NSLog("[CallkitOnesignal] Call state updated - answered calls: \(self.answeredCalls.count), incoming calls: \(self.incomingCalls.count)")
         }
         
-        // Start the call timer when the call is answered
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             self?.provider?.reportOutgoingCall(with: action.callUUID, connectedAt: Date())
             NSLog("[CallkitOnesignal] Call timer started for answered call: \(action.callUUID)")
@@ -732,7 +720,6 @@ extension CallkitOnesignal: CXProviderDelegate {
             }
         }
 
-        // Clean up all call state
         callStateQueue.async(flags: .barrier) { [weak self] in
             guard let self = self else { return }
             self.answeredCalls.remove(action.callUUID)
@@ -741,7 +728,6 @@ extension CallkitOnesignal: CXProviderDelegate {
             self.outgoingCalls.remove(action.callUUID)
         }
 
-        // Clean up the call configuration
         registryAccessQueue.async(flags: .barrier) { [weak self] in
             guard let self = self else { return }
             if self.connectionIdRegistry[action.callUUID] != nil {
@@ -800,7 +786,6 @@ extension CallkitOnesignal: PKPushRegistryDelegate {
         update.supportsGrouping = false
         update.supportsUngrouping = false
 
-        // Store call configuration in registry for later reference
         let config = CallConfig(
             connectionId: callerId,
             username: username,
@@ -815,7 +800,6 @@ extension CallkitOnesignal: PKPushRegistryDelegate {
             if let error = error {
                 NSLog("[CallkitOnesignal] Failed to report incoming call: \(error.localizedDescription)")
             } else {
-                // Track that this call was reported as incoming
                 self?.callStateQueue.async(flags: .barrier) {
                     guard let self = self else { return }
                     self.incomingCalls.insert(callUUID)

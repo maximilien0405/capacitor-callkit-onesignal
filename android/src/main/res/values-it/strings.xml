@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="answer">Rispondi</string>
+    <string name="reject">Rifiuta</string>
+    <string name="end_call">Termina chiamata</string>
+</resources>
+

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="answer">Répondre</string>
+    <string name="reject">Refuser</string>
+    <string name="end_call">Raccrocher</string>
+</resources>
+

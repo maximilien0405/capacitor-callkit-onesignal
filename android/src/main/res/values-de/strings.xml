@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="answer">Annehmen</string>
+    <string name="reject">Ablehnen</string>
+    <string name="end_call">Auflegen</string>
+</resources>
+
