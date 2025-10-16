@@ -1,6 +1,6 @@
 {
   "name": "@maximilien0405/capacitor-callkit-onesignal",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "CallKit and PushKit functionality for Capacitor with OneSignal support on iOS & Android",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
