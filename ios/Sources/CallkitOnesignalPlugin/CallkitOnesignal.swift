@@ -5,6 +5,7 @@ import PushKit
 import AVFoundation
 import Intents
 import Network
+import CoreTelephony
 
 @objc public class CallkitOnesignal: NSObject {
     private static var sharedInstance: CallkitOnesignal?
@@ -66,6 +67,11 @@ import Network
     private func setupCallKit() {
         guard provider == nil else {
             NSLog("[CallkitOnesignal] CallKit provider already exists, skipping setup")
+            return
+        }
+        
+        guard isCallKitAvailable() else {
+            NSLog("[CallkitOnesignal] CallKit not available - running in China. Skipping CallKit setup.")
             return
         }
         
@@ -244,6 +250,10 @@ import Network
     // Public Methods
     
     @objc public func getToken() -> String? {
+        guard isCallKitAvailable() else {
+            NSLog("[CallkitOnesignal] VoIP token not available - running in China")
+            return nil
+        }
         return voipToken
     }
     
@@ -310,6 +320,11 @@ import Network
     }
 
     @objc public func wasLaunchedFromVoIP() -> Bool {
+        guard isCallKitAvailable() else {
+            NSLog("[CallkitOnesignal] CallKit not available in China - skipping was launched from VoIP")
+            return false
+        }
+
         let callObserver = CXCallObserver()
         let activeCalls = callObserver.calls
         
@@ -330,6 +345,11 @@ import Network
     }
 
     @objc public func replayPendingEvents() {
+        guard isCallKitAvailable() else {
+            NSLog("[CallkitOnesignal] CallKit not available in China - skipping replay pending events")
+            return
+        }
+        
         var events: [[String: Any]] = []
         
         pendingEventsQueue.sync {
@@ -368,6 +388,11 @@ import Network
     }
 
     @objc public func startOutgoingCall(callerId: String, username: String, media: String) {
+        guard isCallKitAvailable() else {
+            NSLog("[CallkitOnesignal] CallKit not available in China - outgoing calls not supported via CallKit")
+            return
+        }
+        
         let callObserver = CXCallObserver()
         let activeCalls = callObserver.calls
         if !activeCalls.isEmpty {
@@ -447,6 +472,11 @@ import Network
     }
 
     @objc public func updateCallUI(uuid: UUID, media: String) {
+        guard isCallKitAvailable() else {
+            NSLog("[CallkitOnesignal] CallKit not available in China - skipping update call UI")
+            return
+        }
+
         registryAccessQueue.async(flags: .barrier) { [weak self] in
             guard let self = self else { return }
             guard let existingConfig = self.connectionIdRegistry[uuid] else {
@@ -533,6 +563,11 @@ import Network
     }
 
     public func endAllCalls() {
+        guard isCallKitAvailable() else {
+            NSLog("[CallkitOnesignal] CallKit not available in China - skipping end all calls")
+            return
+        }
+
         let callObserver = CXCallObserver()
         let activeCalls = callObserver.calls
         let controller = CXCallController()
@@ -571,6 +606,11 @@ import Network
     }
     
     @objc public func setMuted(_ isMuted: Bool) {
+        guard isCallKitAvailable() else {
+            NSLog("[CallkitOnesignal] CallKit not available in China - skipping mute/unmute")
+            return
+        }
+
         let callObserver = CXCallObserver()
         let activeCalls = callObserver.calls
         
@@ -609,6 +649,41 @@ import Network
             }
             return result
         }
+    }
+    
+    @objc public func isRunningInChina() -> Bool {
+        let currentRegion = Locale.current.regionCode ?? ""
+        if currentRegion == "CN" {
+            NSLog("[CallkitOnesignal] Device region is China (CN)")
+            return true
+        }
+        
+        let networkInfo = CTTelephonyNetworkInfo()
+        if let carrier = networkInfo.serviceSubscriberCellularProviders?.values.first {
+            let carrierCountryCode = carrier.isoCountryCode ?? ""
+            if carrierCountryCode == "cn" {
+                NSLog("[CallkitOnesignal] Carrier country code indicates China (cn)")
+                return true
+            }
+        }
+        
+        let timezone = TimeZone.current.identifier
+        if timezone.hasPrefix("Asia/Shanghai") || timezone.hasPrefix("Asia/Chongqing") || 
+           timezone.hasPrefix("Asia/Harbin") || timezone.hasPrefix("Asia/Kashgar") || 
+           timezone.hasPrefix("Asia/Urumqi") {
+            NSLog("[CallkitOnesignal] Timezone indicates China: \(timezone)")
+            return true
+        }
+        
+        NSLog("[CallkitOnesignal] Device is not running in China")
+        return false
+    }
+    
+    private func isCallKitAvailable() -> Bool {
+        let isInChina = isRunningInChina()
+        let isAvailable = !isInChina
+        NSLog("[CallkitOnesignal] CallKit available: \(isAvailable) (in China: \(isInChina))")
+        return isAvailable
     }
 }
 
@@ -755,6 +830,11 @@ extension CallkitOnesignal: PKPushRegistryDelegate {
     }
 
     public func pushRegistry(_ registry: PKPushRegistry, didUpdate pushCredentials: PKPushCredentials, for type: PKPushType) {
+        guard isCallKitAvailable() else {
+            NSLog("[CallkitOnesignal] VoIP token received but CallKit not available in China - ignoring")
+            return
+        }
+        
         let token = pushCredentials.token.map { String(format: "%02.2hhx", $0) }.joined()
         voipToken = token
     }
@@ -765,60 +845,65 @@ extension CallkitOnesignal: PKPushRegistryDelegate {
             return
         }
 
-        if provider == nil {
-            setupCallKit()
-        }
-
-        endAllCalls()
-
         let callUUID = UUID()
         let username = extractString(forKey: "username", from: payload.dictionaryPayload) ?? "Unknown"
         let callerId = extractString(forKey: "callerId", from: payload.dictionaryPayload) ?? callUUID.uuidString
         let media = extractString(forKey: "media", from: payload.dictionaryPayload) ?? "audio"
 
-        let update = CXCallUpdate()
-        update.remoteHandle = CXHandle(type: .generic, value: callerId)
-        update.hasVideo = (media == "video")
-        update.localizedCallerName = username
-        
-        update.supportsDTMF = false
-        update.supportsHolding = false
-        update.supportsGrouping = false
-        update.supportsUngrouping = false
+        if isCallKitAvailable() {
+            if provider == nil {
+                setupCallKit()
+            }
 
-        let config = CallConfig(
-            connectionId: callerId,
-            username: username,
-            callerId: callerId,
-            media: media
-        )
-        registryAccessQueue.async(flags: .barrier) { [weak self] in
-            self?.connectionIdRegistry[callUUID] = config
-        }
+            endAllCalls()
 
-        provider?.reportNewIncomingCall(with: callUUID, update: update) { [weak self] error in
-            if let error = error {
-                NSLog("[CallkitOnesignal] Failed to report incoming call: \(error.localizedDescription)")
-            } else {
-                self?.callStateQueue.async(flags: .barrier) {
-                    guard let self = self else { return }
-                    self.incomingCalls.insert(callUUID)
-                    NSLog("[CallkitOnesignal] Incoming call reported and tracked: \(callUUID) - total incoming: \(self.incomingCalls.count)")
+            let update = CXCallUpdate()
+            update.remoteHandle = CXHandle(type: .generic, value: callerId)
+            update.hasVideo = (media == "video")
+            update.localizedCallerName = username
+            
+            update.supportsDTMF = false
+            update.supportsHolding = false
+            update.supportsGrouping = false
+            update.supportsUngrouping = false
+
+            let config = CallConfig(
+                connectionId: callerId,
+                username: username,
+                callerId: callerId,
+                media: media
+            )
+            registryAccessQueue.async(flags: .barrier) { [weak self] in
+                self?.connectionIdRegistry[callUUID] = config
+            }
+
+            provider?.reportNewIncomingCall(with: callUUID, update: update) { [weak self] error in
+                if let error = error {
+                    NSLog("[CallkitOnesignal] Failed to report incoming call: \(error.localizedDescription)")
+                } else {
+                    self?.callStateQueue.async(flags: .barrier) {
+                        guard let self = self else { return }
+                        self.incomingCalls.insert(callUUID)
+                        NSLog("[CallkitOnesignal] Incoming call reported and tracked: \(callUUID) - total incoming: \(self.incomingCalls.count)")
+                    }
+                }
+                
+                completion()
+                DispatchQueue.main.async {
+                    let eventData: [String: Any] = [
+                        "connectionId": callerId,
+                        "username": username,
+                        "callerId": callerId,
+                        "media": media,
+                        "uuid": callUUID.uuidString
+                    ]
+                    
+                    self?.sendEvent(eventName: "incoming", data: eventData)
                 }
             }
-            
+        } else {
+            NSLog("[CallkitOnesignal] CallKit not available in China - VoIP push ignored")
             completion()
-            DispatchQueue.main.async {
-                let eventData: [String: Any] = [
-                    "connectionId": callerId,
-                    "username": username,
-                    "callerId": callerId,
-                    "media": media,
-                    "uuid": callUUID.uuidString
-                ]
-                
-                self?.sendEvent(eventName: "incoming", data: eventData)
-            }
         }
     }
 }
