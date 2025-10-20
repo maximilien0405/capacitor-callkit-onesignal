@@ -4,8 +4,6 @@ import CallKit
 import PushKit
 import AVFoundation
 import Intents
-import Network
-import CoreTelephony
 
 @objc public class CallkitOnesignal: NSObject {
     private static var sharedInstance: CallkitOnesignal?
@@ -646,38 +644,9 @@ import CoreTelephony
         }
     }
     
-    @objc public func isRunningInChina() -> Bool {
-        let currentRegion = Locale.current.regionCode ?? ""
-        if currentRegion == "CN" {
-            NSLog("[CallkitOnesignal] Device region is China (CN)")
-            return true
-        }
-        
-        let networkInfo = CTTelephonyNetworkInfo()
-        if let carrier = networkInfo.serviceSubscriberCellularProviders?.values.first {
-            let carrierCountryCode = carrier.isoCountryCode ?? ""
-            if carrierCountryCode == "cn" {
-                NSLog("[CallkitOnesignal] Carrier country code indicates China (cn)")
-                return true
-            }
-        }
-        
-        let timezone = TimeZone.current.identifier
-        if timezone.hasPrefix("Asia/Shanghai") || timezone.hasPrefix("Asia/Chongqing") || 
-           timezone.hasPrefix("Asia/Harbin") || timezone.hasPrefix("Asia/Kashgar") || 
-           timezone.hasPrefix("Asia/Urumqi") {
-            NSLog("[CallkitOnesignal] Timezone indicates China: \(timezone)")
-            return true
-        }
-        
-        NSLog("[CallkitOnesignal] Device is not running in China")
-        return false
-    }
-    
     private func isCallKitAvailable() -> Bool {
-        let isInChina = isRunningInChina()
-        let isAvailable = !isInChina
-        NSLog("[CallkitOnesignal] CallKit available: \(isAvailable) (in China: \(isInChina))")
+        let regionCode = Locale.current.regionCode
+        let isAvailable = regionCode != "CN"
         return isAvailable
     }
 }
