@@ -345,11 +345,6 @@ import CoreTelephony
     }
 
     @objc public func replayPendingEvents() {
-        guard isCallKitAvailable() else {
-            NSLog("[CallkitOnesignal] CallKit not available in China - skipping replay pending events")
-            return
-        }
-        
         var events: [[String: Any]] = []
         
         pendingEventsQueue.sync {
