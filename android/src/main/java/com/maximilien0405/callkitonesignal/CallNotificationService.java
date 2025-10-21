@@ -178,6 +178,15 @@ public class CallNotificationService extends Service {
             }
         } catch (Exception e) {
             Log.e("CallNotificationService", "Failed to start foreground service: " + e.getMessage());
+            if (e instanceof android.app.ForegroundServiceStartNotAllowedException) {
+                try {
+                    startForeground(notificationId, notification);
+                    Log.d("CallNotificationService", "Fallback to basic startForeground succeeded");
+                } catch (Exception fallbackEx) {
+                    Log.e("CallNotificationService", "All startForeground attempts failed: " + fallbackEx.getMessage());
+                }
+                return;
+            }
             
             if (needsMicrophone && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 try {
@@ -235,6 +244,17 @@ public class CallNotificationService extends Service {
             }
         } catch (Exception e) {
             Log.e("CallNotificationService", "Failed to update to active call: " + e.getMessage());
+            
+            if (e instanceof android.app.ForegroundServiceStartNotAllowedException) {
+                try {
+                    startForeground(notificationId, notification);
+                    Log.d("CallNotificationService", "Fallback to basic startForeground for active call succeeded");
+                } catch (Exception fallbackEx) {
+                    Log.e("CallNotificationService", "All startForeground attempts for active call failed: " + fallbackEx.getMessage());
+                }
+                return;
+            }
+            
             // Fallback to regular startForeground
             try {
                 startForeground(notificationId, notification);
